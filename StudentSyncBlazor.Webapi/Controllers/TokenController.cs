@@ -20,7 +20,7 @@ namespace StudentSync.WebApi.Controllers
         private readonly IConfiguration _configuration;
         private readonly IAuthService _authService;
 
-        public TokenController(IConfiguration configuration, IAuthService authService)
+        public TokenController(IConfiguration configuration, IAuthService authService)   
         {
             _configuration = configuration;
             _authService = authService;

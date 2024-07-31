@@ -73,7 +73,7 @@ namespace StudentSync.ApiControllers
                 _logger.LogError(ex, "Exception occurred while editing student attendance.");
                 return StatusCode(500, "Internal server error");
             }
-        }
+        } 
 
         [HttpPut("Update")]
         public async Task<IActionResult> Update([FromBody] StudentAttendance studentAttendance)

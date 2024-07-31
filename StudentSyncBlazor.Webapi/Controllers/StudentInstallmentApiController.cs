@@ -76,7 +76,7 @@ namespace StudentSync.ApiControllers
         }
 
         [HttpPut("Update")]
-        public async Task<IActionResult> Update([FromBody] StudentInstallment studentInstallment)
+        public async Task<IActionResult> Update([FromBody] StudentInstallment studentInstallment) 
         {
             if (ModelState.IsValid)
             {

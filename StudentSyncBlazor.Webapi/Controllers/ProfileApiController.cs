@@ -15,7 +15,7 @@ namespace StudentSync.WebApi.Controllers
     {
         private readonly IProfileService _profileService;
         private readonly IWebHostEnvironment _webHostEnvironment;
-
+         
         public ProfileApiController(IProfileService profileService, IWebHostEnvironment webHostEnvironment)
         {
             _profileService = profileService;
