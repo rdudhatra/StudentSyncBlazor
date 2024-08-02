@@ -33,7 +33,7 @@
 
     <TopBar />
     <SideBar />
-    <div class="main-content">
+    <div class="main-content">  
 
         <div class="page-content">
             <div class="container-fluid">
@@ -59,3 +59,52 @@
         }
     }
 }
+
+
+
+@* @inherits LayoutComponentBase
+@inject IJSRuntime JSRuntime
+@using Microsoft.AspNetCore.Components.Authorization
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject NavigationManager Navigation
+
+
+<PageTitle>StudentSyncBlazor</PageTitle>
+
+<!-- Begin page -->
+
+<AuthorizeView>
+    <Authorized>
+        <div id="layout-wrapper">
+            <TopBar />
+            <SideBar />
+            <div class="main-content">
+                <div class="page-content">
+                    <div class="container-fluid">
+                        @Body
+                    </div>
+                </div>
+                <Footer></Footer>
+            </div>
+        </div>
+    </Authorized>
+    <NotAuthorized>
+        <RediToLogin/>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code
+{
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await Task.Delay(1).ContinueWith(async T =>
+            {
+                // Do work to load page data and set properties
+                await JSRuntime.InvokeVoidAsync("init");
+            });
+        }
+    }
+
+} *@

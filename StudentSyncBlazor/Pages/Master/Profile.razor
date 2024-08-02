@@ -1,0 +1,113 @@
+﻿@page "/profile"
+@using StudentSyncBlazor.Data.ViewModels
+@inject NavigationManager Navigation
+
+@code {
+    private ProfileViewModel profile = new ProfileViewModel();
+
+    protected override void OnInitialized()
+    {
+        // Mock data for example purposes
+        profile.Email = "user@example.com";
+        profile.Username = "username";
+        profile.Password = "password";
+    }
+
+    private void TogglePassword()
+    {
+        passwordFieldType = passwordFieldType == "password" ? "text" : "password";
+    }
+
+    private string passwordFieldType = "password";
+}
+
+<link rel="stylesheet" href="~/css/bootstrap.min.css" />
+<link rel="stylesheet" href="~/css/app.min.css" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+<link href="~/css/site.css" rel="stylesheet" />
+
+<div class="container">
+    <div class="form-wrapper">
+        <h2 class="text-center">Profile</h2>
+        <EditForm Model="@profile">
+            <div class="form-group">
+                <label for="Email">Email:</label>
+                <InputText id="Email" class="form-control" @bind-Value="profile.Email" readonly />
+            </div>
+            <div class="form-group">
+                <label for="Username">Username:</label>
+                <InputText id="Username" class="form-control" @bind-Value="profile.Username" readonly />
+            </div>
+            <div class="form-group">
+                <label for="Password">Password:</label>
+                <div class="position-relative">
+                    <InputText id="Password" type="@passwordFieldType" class="form-control" @bind-Value="profile.Password" readonly />
+                    <i class="eye-icon fas fa-eye" @onclick="TogglePassword" id="togglePassword"></i>
+                </div>
+            </div>
+        </EditForm>
+        <h6>
+            Dear User, you can view the profile but cannot make any changes.
+        </h6>
+    </div>
+</div>
+
+
+@*                 @page "/profile"
+@using StudentSyncBlazor.Core.Services.Interface
+@using StudentSyncBlazor.Data.ViewModels
+@inject IProfileService ProfileService
+@inject NavigationManager NavigationManager
+
+<div class="container">
+    <div class="form-wrapper">
+        <h2 class="text-center">Profile</h2>
+
+        @if (profile != null)
+        {
+            <form>
+                <div class="form-group">
+                    <label for="Email">Email:</label>
+                    <input type="text" id="Email" name="Email" class="form-control" value="@profile.Email" readonly />
+                </div>
+                <div class="form-group">
+                    <label for="Username">Username:</label>
+                    <input type="text" id="Username" name="Username" class="form-control" value="@profile.Username" readonly />
+                </div>
+                <div class="form-group">
+                    <label for="Password">Password:</label>
+                    <div class="position-relative">
+                        <input type="@passwordInputType" id="Password" name="Password" class="form-control" value="@profile.Password" readonly />
+                        <button type="button" class="btn btn-link" @onclick="TogglePasswordVisibility">
+                            <i class="eye-icon fas @(passwordInputType == "password" ? "fa-eye" : "fa-eye-slash")"></i>
+                        </button>
+                    </div>
+                </div>
+            </form>
+            <h6>
+                Dear User, you can view the profile but cannot make any changes.
+            </h6>
+        }
+        else
+        {
+            <p>Loading...</p>
+        }
+    </div>
+</div>
+
+@code {
+    private ProfileViewModel profile;
+    private string passwordInputType = "password";
+    private string username = "current_user"; // Replace with actual username logic
+
+    protected override async Task OnInitializedAsync()
+    {
+        profile = await ProfileService.GetProfileAsync(username);
+    }
+
+    private void TogglePasswordVisibility()
+    {
+        passwordInputType = passwordInputType == "password" ? "text" : "password";
+    }
+}
+ *@

@@ -23,7 +23,7 @@ namespace StudentSyncBlazor.Data.ViewModels
 
         [Required(ErrorMessage = "Username is required")]
         [StringLength(50, ErrorMessage = "Username cannot be longer than 50 characters")]
-        public string Username { get; set; }
+        public string Username {    get; set; }
     }
 
 }

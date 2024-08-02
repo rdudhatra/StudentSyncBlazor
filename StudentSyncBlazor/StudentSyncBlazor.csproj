@@ -30,6 +30,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Folder Include="Authentication\" />
     <Folder Include="wwwroot\assets\libs\datatables.net-autofill-bs5\types\" />
     <Folder Include="wwwroot\assets\libs\datatables.net-autofill\types\" />
     <Folder Include="wwwroot\assets\libs\datatables.net-bs5\types\" />

@@ -1,4 +1,7 @@
-﻿@inject IJSRuntime JSRuntime
+﻿@using StudentSyncBlazor.Core.Services.Interface
+@inject IJSRuntime JSRuntime
+@inject NavigationManager Navigation
+@inject IAuthService AuthService
 
 <header id="page-topbar">
 	<div class="navbar-header">
@@ -245,19 +248,33 @@
 						data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
 					<img class="rounded-circle header-profile-user" src="/assets/images/users/avatar-4.jpg"
 						 alt="Header Avatar">
-					<span class="d-none d-xl-inline-block ms-1 fw-medium font-size-15">Marcus</span>
+					<span class="d-none d-xl-inline-block ms-1 fw-medium font-size-15">Profile</span>
 					<i class="uil-angle-down d-none d-xl-inline-block font-size-15"></i>
 				</button>
 				<div class="dropdown-menu dropdown-menu-end">
 					<!-- item-->
-					<a class="dropdown-item" href="#"><i class="uil uil-user-circle font-size-18 align-middle text-muted me-1"></i> <span class="align-middle">View Profile</span></a>
-					<a class="dropdown-item" href="#"><i class="uil uil-wallet font-size-18 align-middle me-1 text-muted"></i> <span class="align-middle">My Wallet</span></a>
-					<a class="dropdown-item d-block" href="#"><i class="uil uil-cog font-size-18 align-middle me-1 text-muted"></i> <span class="align-middle">Settings</span> <span class="badge bg-soft-success rounded-pill mt-1 ms-2">03</span></a>
-					<a class="dropdown-item" href="#"><i class="uil uil-lock-alt font-size-18 align-middle me-1 text-muted"></i> <span class="align-middle">Lock screen</span></a>
-					<a class="dropdown-item" href="#"><i class="uil uil-sign-out-alt font-size-18 align-middle me-1 text-muted"></i> <span class="align-middle">Sign out</span></a>
+					<a class="dropdown-item" href="/profile">
+						<i class="uil uil-user-circle font-size-18 align-middle text-muted me-1"></i>
+						<span class="align-middle">View Profile</span>
+					</a>@* 					<a class="dropdown-item" href="#"><i class="uil uil-sign-out-alt font-size-18 align-middle me-1 text-muted"></i> <span class="align-middle">Sign out</span></a>
+					*@
+					<a class="dropdown-item" href="#" @onclick="NavigateToLogin">
+						<i class="uil uil-sign-in-alt font-size-18 align-middle me-1 text-muted"></i>
+						<span class="align-middle">Login</span>
+					</a>
+					<a class="dropdown-item" href="#" @onclick="NavigateToSignup">
+						<i class="uil uil-user-plus font-size-18 align-middle me-1 text-muted"></i>
+						<span class="align-middle">Signup</span>
+					</a>
+					<a class="dropdown-item" href="#" @onclick="Logout">
+						<i class="uil uil-sign-out-alt font-size-18 align-middle me-1 text-muted"></i>
+						<span class="align-middle">Sign out</span>
+					</a>
+
 				</div>
 			</div>
-
+		
+ 
 			<div class="dropdown d-inline-block">
 				<button type="button" class="btn header-item noti-icon right-bar-toggle waves-effect">
 					<i class="uil-cog"></i>
@@ -269,6 +286,21 @@
 </header>
 
 @code{
+	private async Task Logout()
+	{
+		await AuthService.LogoutAsync();
+		Navigation.NavigateTo("/login");
+	}
+
+	private void NavigateToLogin()
+	{
+		Navigation.NavigateTo("/login");
+	}
+
+	private void NavigateToSignup()
+	{
+		Navigation.NavigateTo("/Register");
+	}
 	protected override async Task OnAfterRenderAsync(bool firstRender)
 	{
 		if (firstRender)

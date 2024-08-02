@@ -1,20 +1,42 @@
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.EntityFrameworkCore;
+using StudentSync.Core.Services;
+using StudentSyncBlazor.Core.Services;
+using StudentSyncBlazor.Core.Services.Interface;
 using StudentSyncBlazor.Data;
 using StudentSyncBlazor.Data.Data;
+using StudentSyncBlazor.Pages;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+        .AddCookie(options =>
+        {
+            options.LoginPath = "/login";
+            options.LogoutPath = "/logout";
+            options.ExpireTimeSpan = TimeSpan.FromMinutes(60); // Cookie expiration
 
+        });
+
+builder.Services.AddAuthorization();
 builder.Services.AddDbContext<StudentSyncDbContext>(options =>
        options.UseSqlServer(builder.Configuration.GetConnectionString("StudentSyncBlazorCon")));
 
 // Add services to the container.
 builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
+builder.Services.AddSingleton<AuthenticationService>();
+builder.Services.AddScoped<AuthenticationStateProvider, CustomAuthenticationStateProvider>(provider => provider.GetRequiredService<CustomAuthenticationStateProvider>());
+builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IBatchService, BatchService>();
 builder.Services.AddSingleton<WeatherForecastService>();
+builder.Services.AddScoped<IProfileService, ProfileService>();
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<CustomAuthenticationStateProvider>();
+
 
 var app = builder.Build();
 
@@ -28,6 +50,7 @@ if (!app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
+
 app.UseRouting();
 
 app.UseAuthentication();

@@ -1,0 +1,31 @@
+﻿
+@inherits LayoutComponentBase
+@inject IJSRuntime JSRuntime
+
+<PageTitle>Authentication</PageTitle>
+
+
+<div class="authentication-bg">
+    <main>
+        @Body
+    </main>
+</div>
+<style>
+    html, body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+    }
+
+    .authentication-bg {
+        display: flex;
+        flex-direction: column;
+        height: 100vh; /* Full viewport height */
+        width: 100vw; /* Full viewport width */
+    }
+
+    main {
+        flex: 1; /* Takes up remaining space */
+    }
+
+</style>

@@ -18,3 +18,4 @@ namespace StudentSyncBlazor.Core.Services.Interface
 
     }
 }
+ 

@@ -18,7 +18,7 @@ namespace StudentSyncBlazor.Core.Services.Interface
         Task DeleteBatchAsync(int id);
         List<Batch> GetAllBatchesIdsAsync();
         Task<int> GetTotalBatchesAsync();
-
+         
 
     }
 }
