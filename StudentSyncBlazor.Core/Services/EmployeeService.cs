@@ -57,7 +57,7 @@ namespace StudentSync.Core.Services
             _context.Employees.Remove(employee);
             await _context.SaveChangesAsync();
             return Result.Success("Employee deleted successfully");
-        }
+        }  
 
         public async Task<IResult<IEnumerable<Employee>>> SearchEmployeesByNameAsync(string name)
         {

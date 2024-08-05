@@ -13,7 +13,7 @@ namespace StudentSyncBlazor.Data.ResponseModel
         public string? LastName { get; set; }
         public string? Gender { get; set; }
         public DateTime? DoB { get; set; }
-        public string? Qualification { get; set; }
+        public string? Qualification { get; set; } 
         public string? Designation { get; set; }
         public bool? IsActive { get; set; }
         public string? CreatedBy { get; set; }

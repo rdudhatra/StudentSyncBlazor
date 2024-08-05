@@ -9,7 +9,7 @@ namespace StudentSyncBlazor.Core.Services.Interface
     public interface IEmployeeService
     {
         Task<List<Employee>> GetAllEmployeesAsync();
-        Task<Employee> GetEmployeeByIdAsync(int id);
+        Task<Employee> GetEmployeeByIdAsync(int id); 
         Task<IResult> AddEmployeeAsync(Employee employee);
         Task<IResult> UpdateEmployeeAsync(Employee employee);
         Task<IResult> DeleteEmployeeAsync(int id);

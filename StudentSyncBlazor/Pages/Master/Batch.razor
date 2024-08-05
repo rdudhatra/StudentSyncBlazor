@@ -1,4 +1,451 @@
-﻿@* @page "/master/batch/index"
+﻿    @* @page "/master/batch/index"
+    @using StudentSyncBlazor.Data.Models
+    @using StudentSyncBlazor.Core.Services.Interface
+    @using Microsoft.AspNetCore.Components
+    @using Microsoft.AspNetCore.Components.Forms
+    @using StudentSyncBlazor.Data.ResponseModel
+    @inject IJSRuntime JSRuntime
+    @inject IBatchService BatchService
+
+    <h3>Batch</h3>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <button type="button" class="btn btn-primary mb-3" @onclick="OpenAddBatchModal">+</button>
+                    <table id="BatchTable" class="table table-bordered dt-responsive nowrap" style="width: 100%;">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Batch Code</th>
+                                <th>Batch Time</th>
+                                <th>Faculty Name</th>
+                                <th>Remarks</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var batch in batches)
+                            {
+                                <tr>
+                                    <td>@batch.Id</td>
+                                    <td>@batch.BatchCode</td>
+                                    <td>@batch.BatchTime</td>
+                                    <td>@batch.FacultyName</td>
+                                    <td>@batch.Remarks</td>
+                                    <td>
+                                        <button class="btn btn-warning" @onclick="() => OpenEditBatchModal(batch.Id)">Edit</button>
+                                        <button class="btn btn-danger" @onclick="() => OpenDeleteConfirmationModal(batch.Id)">Delete</button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add/Edit Batch Modal -->
+    <div class="modal fade" id="addEditBatchModal" tabindex="-1" aria-labelledby="addEditBatchModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addEditBatchModalLabel">@Title</h5>
+                    <button type="button" class="btn-close" aria-label="Close" @onclick="CloseAddEditBatchModal"></button>
+                </div>
+                <div class="modal-body">
+                    <EditForm Model="batch" OnValidSubmit="HandleValidSubmit">
+                        <DataAnnotationsValidator />
+                        <ValidationSummary />
+                        <div class="form-group">
+                            <label for="BatchCode">Batch Code</label>
+                            <InputText id="BatchCode" class="form-control" @bind-Value="batch.BatchCode" />
+                        </div>
+                        <div class="form-group">
+                            <label for="BatchTime">Batch Time</label>
+                            <InputText id="BatchTime" class="form-control" @bind-Value="batch.BatchTime" />
+                        </div>
+                        <div class="form-group">
+                            <label for="FacultyName">Faculty Name</label>
+                            <InputText id="FacultyName" class="form-control" @bind-Value="batch.FacultyName" />
+                        </div>
+                        <div class="form-group">
+                            <label for="Remarks">Remarks</label>
+                            <InputTextArea id="Remarks" class="form-control" @bind-Value="batch.Remarks" />
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" @onclick="CloseAddEditBatchModal">Cancel</button>
+                            <button type="submit" class="btn btn-primary">Save</button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div class="modal fade" id="deleteConfirmationModal" tabindex="-1" aria-labelledby="deleteConfirmationModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="deleteConfirmationModalLabel">Delete Confirmation</h5>
+                    <button type="button" class="btn-close" aria-label="Close" @onclick="CloseDeleteConfirmationModal"></button>
+                </div>
+                <div class="modal-body">
+                    Are you sure you want to delete this batch?
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseDeleteConfirmationModal">Cancel</button>
+                    <button type="button" class="btn btn-danger" @onclick="ConfirmDeleteBatch">Delete</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @code {
+        private List<BatchResponseModel> batches = new List<BatchResponseModel>();
+        private Data.Models.Batch batch = new Data.Models.Batch();
+        private bool isEditing = false;
+        private int batchToDeleteId;
+
+        private string Title => isEditing ? "Edit Batch" : "Add Batch";
+
+        protected override async Task OnInitializedAsync()
+        {
+            await LoadBatches();
+        }
+
+        private async Task LoadBatches()
+        {
+            try
+            {
+                batches = await BatchService.GetAllBatchesAsync();
+                if (batches == null || !batches.Any())
+                {
+                    Console.WriteLine("No data returned from service.");
+                }
+                else
+                {
+                    Console.WriteLine($"Data loaded: {batches.Count} items.");
+                }
+                StateHasChanged(); // Force UI to update
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error loading data: {ex.Message}");
+            }
+        }
+
+
+        private void OpenAddBatchModal()
+        {
+            batch = new Data.Models.Batch();
+            isEditing = false;
+            ShowModal("addEditBatchModal");
+        }
+
+        private async Task OpenEditBatchModal(int batchId)
+        {
+            isEditing = true;
+             batch = await BatchService.GetBatchByIdAsync(batchId);
+            ShowModal("addEditBatchModal");
+        }
+
+        private async Task OpenDeleteConfirmationModal(int batchId)
+        {
+            batchToDeleteId = batchId;
+            ShowModal("deleteConfirmationModal");
+        }
+
+        private async Task CloseAddEditBatchModal()
+        {
+            await HideModal("addEditBatchModal");
+        }
+
+        private async Task CloseDeleteConfirmationModal()
+        {
+            await HideModal("deleteConfirmationModal");
+        }
+
+        private async Task ConfirmDeleteBatch()
+        {
+            await BatchService.DeleteBatchAsync(batchToDeleteId);
+            await LoadBatches();
+            await CloseDeleteConfirmationModal();
+        }
+
+        private async Task HandleValidSubmit()
+        {
+            if (isEditing)
+            {
+                 await BatchService.UpdateBatchAsync(batch);
+            }
+            else
+            {
+                await BatchService.CreateBatchAsync(batch);
+            }
+            await LoadBatches();
+            await CloseAddEditBatchModal();
+        }
+
+        private async Task ShowModal(string modalId)
+        {
+            await JSRuntime.InvokeVoidAsync("showModal", modalId);
+        }
+
+        private async Task HideModal(string modalId)
+        {
+            await JSRuntime.InvokeVoidAsync("hideModal", modalId);
+        }
+
+
+    }
+
+
+     *@
+
+
+
+    @* @page "/master/batch/index"
+    @using StudentSyncBlazor.Data.Models
+    @using StudentSyncBlazor.Core.Services.Interface
+    @using Microsoft.AspNetCore.Components
+    @using Microsoft.AspNetCore.Components.Forms
+    @using StudentSyncBlazor.Data.ResponseModel
+    @inject IJSRuntime JSRuntime
+    @inject IBatchService BatchService
+
+    <h3>Batch</h3>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <button type="button" class="btn btn-primary mb-3" @onclick="OpenAddBatchModal">+</button>
+                    <table id="BatchTable" class="table table-bordered dt-responsive nowrap" style="width: 100%;">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Batch Code</th>
+                                <th>Batch Time</th>
+                                <th>Faculty Name</th>
+                                <th>Remarks</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var batch in paginatedBatches)
+                            {
+                                <tr>
+                                    <td>@batch.Id</td>
+                                    <td>@batch.BatchCode</td>
+                                    <td>@batch.BatchTime</td>
+                                    <td>@batch.FacultyName</td>
+                                    <td>@batch.Remarks</td>
+                                    <td>
+                                        <button class="btn btn-warning" @onclick="() => OpenEditBatchModal(batch.Id)">Edit</button>
+                                        <button class="btn btn-danger" @onclick="() => OpenDeleteConfirmationModal(batch.Id)">Delete</button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                    <div class="pagination mt-3">
+                        <button class="btn btn-secondary" @onclick="PreviousPage" disabled="@(!HasPreviousPage)">Previous</button>
+                        <span>Page @CurrentPage of @TotalPages</span>
+                        <button class="btn btn-secondary" @onclick="NextPage" disabled="@(!HasNextPage)">Next</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add/Edit Batch Modal -->
+    <div class="modal fade" id="addEditBatchModal" tabindex="-1" aria-labelledby="addEditBatchModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addEditBatchModalLabel">@Title</h5>
+                    <button type="button" class="btn-close" aria-label="Close" @onclick="CloseAddEditBatchModal"></button>
+                </div>
+                <div class="modal-body">
+                    <EditForm Model="batch" OnValidSubmit="HandleValidSubmit">
+                        <DataAnnotationsValidator />
+                        <ValidationSummary />
+                        <div class="form-group">
+                            <label for="BatchCode">Batch Code</label>
+                            <InputText id="BatchCode" class="form-control" @bind-Value="batch.BatchCode" />
+                        </div>
+                        <div class="form-group">
+                            <label for="BatchTime">Batch Time</label>
+                            <InputText id="BatchTime" class="form-control" @bind-Value="batch.BatchTime" />
+                        </div>
+                        <div class="form-group">
+                            <label for="FacultyName">Faculty Name</label>
+                            <InputText id="FacultyName" class="form-control" @bind-Value="batch.FacultyName" />
+                        </div>
+                        <div class="form-group">
+                            <label for="Remarks">Remarks</label>
+                            <InputTextArea id="Remarks" class="form-control" @bind-Value="batch.Remarks" />
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" @onclick="CloseAddEditBatchModal">Cancel</button>
+                            <button type="submit" class="btn btn-primary">Save</button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div class="modal fade" id="deleteConfirmationModal" tabindex="-1" aria-labelledby="deleteConfirmationModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="deleteConfirmationModalLabel">Delete Confirmation</h5>
+                    <button type="button" class="btn-close" aria-label="Close" @onclick="CloseDeleteConfirmationModal"></button>
+                </div>
+                <div class="modal-body">
+                    Are you sure you want to delete this batch?
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseDeleteConfirmationModal">Cancel</button>
+                    <button type="button" class="btn btn-danger" @onclick="ConfirmDeleteBatch">Delete</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @code {
+        private List<BatchResponseModel> batches = new List<BatchResponseModel>();
+        private List<BatchResponseModel> paginatedBatches = new List<BatchResponseModel>();
+        private Data.Models.Batch batch = new Data.Models.Batch();
+        private bool isEditing = false;
+        private int batchToDeleteId;
+
+        private int CurrentPage { get; set; } = 1;
+        private int PageSize { get; set; } = 10;
+        private int TotalPages { get; set; }
+        private bool HasPreviousPage => CurrentPage > 1;
+        private bool HasNextPage => CurrentPage < TotalPages;
+
+        private string Title => isEditing ? "Edit Batch" : "Add Batch";
+
+        protected override async Task OnInitializedAsync()
+        {
+            await LoadBatches();
+        }
+
+        private async Task LoadBatches()
+        {
+            try
+            {
+                var allBatches = await BatchService.GetAllBatchesAsync();
+                if (allBatches == null || !allBatches.Any())
+                {
+                    Console.WriteLine("No data returned from service.");
+                    batches = new List<BatchResponseModel>();
+                }
+                else
+                {
+                    Console.WriteLine($"Data loaded: {allBatches.Count} items.");
+                    batches = allBatches;
+                    TotalPages = (int)Math.Ceiling(batches.Count / (double)PageSize);
+                    paginatedBatches = batches.Skip((CurrentPage - 1) * PageSize).Take(PageSize).ToList();
+                }
+                StateHasChanged(); // Force UI to update
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error loading data: {ex.Message}");
+            }
+        }
+
+        private async Task PreviousPage()
+        {
+            if (HasPreviousPage)
+            {
+                CurrentPage--;
+                await LoadBatches();
+            }
+        }
+
+        private async Task NextPage()
+        {
+            if (HasNextPage)
+            {
+                CurrentPage++;
+                await LoadBatches();
+            }
+        }
+
+        private void OpenAddBatchModal()
+        {
+            batch = new Data.Models.Batch();
+            isEditing = false;
+            ShowModal("addEditBatchModal");
+        }
+
+        private async Task OpenEditBatchModal(int batchId)
+        {
+            isEditing = true;
+            batch = await BatchService.GetBatchByIdAsync(batchId);
+            ShowModal("addEditBatchModal");
+        }
+
+        private async Task OpenDeleteConfirmationModal(int batchId)
+        {
+            batchToDeleteId = batchId;
+            ShowModal("deleteConfirmationModal");
+        }
+
+        private async Task CloseAddEditBatchModal()
+        {
+            await HideModal("addEditBatchModal");
+        }
+
+        private async Task CloseDeleteConfirmationModal()
+        {
+            await HideModal("deleteConfirmationModal");
+        }
+
+        private async Task ConfirmDeleteBatch()
+        {
+            await BatchService.DeleteBatchAsync(batchToDeleteId);
+            await LoadBatches();
+            await CloseDeleteConfirmationModal();
+        }
+
+        private async Task HandleValidSubmit()
+        {
+            if (isEditing)
+            {
+                await BatchService.UpdateBatchAsync(batch);
+            }
+            else
+            {
+                await BatchService.CreateBatchAsync(batch);
+            }
+            await LoadBatches();
+            await CloseAddEditBatchModal();
+        }
+
+        private async Task ShowModal(string modalId)
+        {
+            await JSRuntime.InvokeVoidAsync("showModal", modalId);
+        }
+
+        private async Task HideModal(string modalId)
+        {
+            await JSRuntime.InvokeVoidAsync("hideModal", modalId);
+        }
+    }
+     *@
+
+ @*   @page "/master/batch/index"
 @using StudentSyncBlazor.Data.Models
 @using StudentSyncBlazor.Core.Services.Interface
 @using Microsoft.AspNetCore.Components
@@ -7,6 +454,9 @@
 @inject IJSRuntime JSRuntime
 @inject IBatchService BatchService
 
+<link href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" rel="stylesheet" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+
 <h3>Batch</h3>
 
 <div class="row">
@@ -14,6 +464,8 @@
         <div class="card">
             <div class="card-body">
                 <button type="button" class="btn btn-primary mb-3" @onclick="OpenAddBatchModal">+</button>
+
+
                 <table id="BatchTable" class="table table-bordered dt-responsive nowrap" style="width: 100%;">
                     <thead>
                         <tr>
@@ -21,22 +473,18 @@
                             <th>Batch Code</th>
                             <th>Batch Time</th>
                             <th>Faculty Name</th>
-                            <th>Course Name</th>
-                            <th>Is Active</th>
                             <th>Remarks</th>
                             <th>Action</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach (var batch in batches)
+                        @foreach (var batch in paginatedBatches)
                         {
                             <tr>
                                 <td>@batch.Id</td>
                                 <td>@batch.BatchCode</td>
                                 <td>@batch.BatchTime</td>
                                 <td>@batch.FacultyName</td>
-                                <td>@batch.CourseName</td>
-                                <td>@(batch.IsActive ? "Yes" : "No")</td>
                                 <td>@batch.Remarks</td>
                                 <td>
                                     <button class="btn btn-warning" @onclick="() => OpenEditBatchModal(batch.Id)">Edit</button>
@@ -46,6 +494,21 @@
                         }
                     </tbody>
                 </table>
+                <!-- Pagination Container -->
+                <div class="pagination-container d-flex justify-content-between align-items-center mb-3">
+                    <!-- Pagination Message -->
+                    <div class="pagination-message">
+                        Showing @StartEntry to @EndEntry of @TotalEntries entries
+                    </div>
+
+                    <!-- Pagination Controls -->
+                    <div class="pagination-controls d-flex align-items-center">
+                        <button class="btn btn-secondary me-2" @onclick="PreviousPage" disabled="@(!HasPreviousPage)">Previous</button>
+                        <button class="btn btn-primary me-2" disabled>@CurrentPage</button>
+                        <button class="btn btn-secondary me-2" @onclick="NextPage" disabled="@(!HasNextPage)">Next</button>
+                    </div>
+                </div>
+
             </div>
         </div>
     </div>
@@ -74,16 +537,6 @@
                     <div class="form-group">
                         <label for="FacultyName">Faculty Name</label>
                         <InputText id="FacultyName" class="form-control" @bind-Value="batch.FacultyName" />
-                    </div>
-                    <div class="form-group">
-                        <label for="BatchCourseId">Course Name</label>
-                        <InputSelect id="BatchCourseId" @bind-Value="batch.BatchCourseId">
-                            <!-- Populate options dynamically here -->
-                        </InputSelect>
-                    </div>
-                    <div class="form-group">
-                        <label for="IsActive">Is Active</label>
-                        <InputCheckbox id="IsActive" @bind-Value="batch.IsActive" />
                     </div>
                     <div class="form-group">
                         <label for="Remarks">Remarks</label>
@@ -119,10 +572,41 @@
 </div>
 
 @code {
+    private async Task ShowSuccessToast(string message)
+    {
+        await JSRuntime.InvokeVoidAsync("showSuccess", message);
+    }
+
+    private async Task ShowErrorToast(string message)
+    {
+        await JSRuntime.InvokeVoidAsync("showError", message);
+    }
+
+    private async Task ShowInfoToast(string message)
+    {
+        await JSRuntime.InvokeVoidAsync("showInfo", message);
+    }
+
+    private async Task ShowWarningToast(string message)
+    {
+        await JSRuntime.InvokeVoidAsync("showWarning", message);
+    }
+
     private List<BatchResponseModel> batches = new List<BatchResponseModel>();
-    private BatchResponseModel batch = new BatchResponseModel();
+    private List<BatchResponseModel> paginatedBatches = new List<BatchResponseModel>();
+    private Data.Models.Batch batch = new Data.Models.Batch();
     private bool isEditing = false;
     private int batchToDeleteId;
+
+    private int CurrentPage { get; set; } = 1;
+    private int PageSize { get; set; } = 10;
+    private int TotalEntries { get; set; }
+    private int TotalPages { get; set; }
+    private bool HasPreviousPage => CurrentPage > 1;
+    private bool HasNextPage => CurrentPage < TotalPages;
+
+    private int StartEntry => (CurrentPage - 1) * PageSize + 1;
+    private int EndEntry => Math.Min(CurrentPage * PageSize, TotalEntries);
 
     private string Title => isEditing ? "Edit Batch" : "Add Batch";
 
@@ -133,12 +617,62 @@
 
     private async Task LoadBatches()
     {
-        batches = await BatchService.GetAllBatchesAsync();
+        try
+        {
+            // Fetch all batches from the service
+            var allBatches = await BatchService.GetAllBatchesAsync();
+            if (allBatches == null || !allBatches.Any())
+            {
+                batches = new List<BatchResponseModel>();
+            }
+            else
+            {
+                batches = allBatches;
+                TotalEntries = batches.Count; // Set total entries
+                                              // Calculate the total number of pages
+                TotalPages = (int)Math.Ceiling(TotalEntries / (double)PageSize);
+                // Fetch the data for the current page
+                paginatedBatches = batches.Skip((CurrentPage - 1) * PageSize).Take(PageSize).ToList();
+            }
+            StateHasChanged(); // Force UI to update
+        }
+        catch (Exception ex)
+        {
+            // Handle any exceptions that occur
+            Console.WriteLine($"Error loading data: {ex.Message}");
+        }
+    }
+
+    private async Task PreviousPage()
+    {
+        if (HasPreviousPage)
+        {
+            CurrentPage--;
+            await LoadBatches();
+        }
+    }
+
+    private async Task NextPage()
+    {
+        if (HasNextPage)
+        {
+            CurrentPage++;
+            await LoadBatches();
+        }
+    }
+
+    private async Task GoToPage(int pageNumber)
+    {
+        if (pageNumber >= 1 && pageNumber <= TotalPages)
+        {
+            CurrentPage = pageNumber;
+            await LoadBatches();
+        }
     }
 
     private void OpenAddBatchModal()
     {
-        batch = new BatchResponseModel();
+        batch = new Data.Models.Batch();
         isEditing = false;
         ShowModal("addEditBatchModal");
     }
@@ -146,55 +680,423 @@
     private async Task OpenEditBatchModal(int batchId)
     {
         isEditing = true;
-        // batch = await BatchService.GetBatchByIdAsync(batchId);
+        batch = await BatchService.GetBatchByIdAsync(batchId);
         ShowModal("addEditBatchModal");
     }
 
-    private async Task OpenDeleteConfirmationModal(int batchId)
+    private void OpenDeleteConfirmationModal(int batchId)
     {
         batchToDeleteId = batchId;
         ShowModal("deleteConfirmationModal");
     }
 
-    private async Task CloseAddEditBatchModal()
+    private void CloseAddEditBatchModal()
     {
-        await HideModal("addEditBatchModal");
+        HideModal("addEditBatchModal");
     }
 
-    private async Task CloseDeleteConfirmationModal()
+    private void CloseDeleteConfirmationModal()
     {
-        await HideModal("deleteConfirmationModal");
-    }
-
-    private async Task ConfirmDeleteBatch()
-    {
-        await BatchService.DeleteBatchAsync(batchToDeleteId);
-        await LoadBatches();
-        await CloseDeleteConfirmationModal();
+        HideModal("deleteConfirmationModal");
     }
 
     private async Task HandleValidSubmit()
     {
-        if (isEditing)
+        try
         {
-           // await BatchService.UpdateBatchAsync(batch);
+            if (isEditing)
+            {
+                await BatchService.UpdateBatchAsync(batch);
+                await ShowSuccessToast("Batch updated successfully.");
+            }
+            else
+            {
+                await BatchService.CreateBatchAsync(batch);
+                await ShowSuccessToast("Batch added successfully.");
+            }
+            await LoadBatches();
         }
-        else
+        catch (Exception ex)
         {
-           // await BatchService.CreateBatchAsync(batch);
+            await ShowErrorToast($"Error saving batch: {ex.Message}");
         }
+        finally
+        {
+            CloseAddEditBatchModal();
+        }
+    }
+
+    private async Task ConfirmDeleteBatch()
+    {
+        try
+        {
+            await BatchService.DeleteBatchAsync(batchToDeleteId);
+            await ShowSuccessToast("Batch deleted successfully.");
+            await LoadBatches();
+        }
+        catch (Exception ex)
+        {
+            await ShowErrorToast($"Error deleting batch: {ex.Message}");
+        }
+        finally
+        {
+            CloseDeleteConfirmationModal();
+        }
+    }
+
+    private void ShowModal(string modalId)
+    {
+        JSRuntime.InvokeVoidAsync("eval", $"$('#{modalId}').modal('show');");
+    }
+
+    private void HideModal(string modalId)
+    {
+        JSRuntime.InvokeVoidAsync("eval", $"$('#{modalId}').modal('hide');");
+    }
+} *@
+
+  @page "/master/batch/index"
+@using StudentSyncBlazor.Data.Models
+@using StudentSyncBlazor.Core.Services.Interface
+@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Forms
+@using StudentSyncBlazor.Data.ResponseModel
+@inject IJSRuntime JSRuntime
+@inject IBatchService BatchService
+
+
+<link href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" rel="stylesheet" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+
+
+<Breadcrumb Title="Batch" BreadcrumbPageTitle="Master"></Breadcrumb>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <!-- Search Box and Add Button -->
+                <div class="mb-3 d-flex justify-content-between align-items-center">
+                    <button type="button" class="btn btn-primary ms-3" @onclick="OpenAddBatchModal">+</button>
+                    <input type="text" class="form-control" style="width: 13%;" placeholder="Search..." @bind="SearchQuery" @oninput="SearchBatches" />
+                </div>
+
+                <table id="BatchTable" class="table table-bordered dt-responsive nowrap" style="width: 100%;">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Batch Code</th>
+                            <th>Batch Time</th>
+                            <th>Faculty Name</th>
+                            <th>Remarks</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var batch in paginatedBatches)
+                        {
+                            <tr>
+                                <td>@batch.Id</td>
+                                <td>@batch.BatchCode</td>
+                                <td>@batch.BatchTime</td>
+                                <td>@batch.FacultyName</td>
+                                <td>@batch.Remarks</td>
+                                <td>
+                                    <button class="btn btn-warning btn-sm" @onclick="() => OpenEditBatchModal(batch.Id)">Edit</button>
+                                    <button class="btn btn-danger btn-sm" @onclick="() => OpenDeleteConfirmationModal(batch.Id)">Delete</button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+                <!-- Pagination Container -->
+                <div class="pagination-container d-flex justify-content-between align-items-center mb-3">
+                    <!-- Pagination Message -->
+                    <div class="pagination-message">
+                        Showing @StartEntry to @EndEntry of @TotalEntries entries
+                    </div>
+
+                    <!-- Pagination Controls -->
+                    <div class="pagination-controls d-flex align-items-center">
+                        <button class="btn btn-secondary me-2" @onclick="PreviousPage" disabled="@(!HasPreviousPage)">Previous</button>
+                        <button class="btn btn-primary me-2" disabled>@CurrentPage</button>
+                        <button class="btn btn-secondary me-2" @onclick="NextPage" disabled="@(!HasNextPage)">Next</button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit Batch Modal -->
+<div class="modal fade" id="addEditBatchModal" tabindex="-1" aria-labelledby="addEditBatchModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addEditBatchModalLabel">@Title</h5>
+                <button type="button" class="btn-close" aria-label="Close" @onclick="CloseAddEditBatchModal"></button>
+            </div>
+            <div class="modal-body">
+                <EditForm Model="batch" OnValidSubmit="HandleValidSubmit">
+                    <DataAnnotationsValidator />
+                     <div class="form-group">
+                        <label for="BatchCode">Batch Code</label>
+                        <InputText id="BatchCode" class="form-control" @bind-Value="batch.BatchCode" />
+                        <ValidationMessage For="@(() => batch.BatchCode)" />
+                    </div>  
+                    <div class="form-group">
+                        <label for="BatchTime">Batch Time</label>
+                        <InputText id="BatchTime" class="form-control" @bind-Value="batch.BatchTime" />
+                        <ValidationMessage For="@(() => batch.BatchTime)" />
+
+                    </div>
+                    <div class="form-group">
+                        <label for="FacultyName">Faculty Name</label>
+                        <InputText id="FacultyName" class="form-control" @bind-Value="batch.FacultyName" />
+                        <ValidationMessage For="@(() => batch.FacultyName)" />
+
+                    </div>
+                    <div class="form-group">
+                        <label for="Remarks">Remarks</label>
+                        <InputTextArea id="Remarks" class="form-control" @bind-Value="batch.Remarks" />
+                        <ValidationMessage For="@(() => batch.Remarks)" />
+
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CloseAddEditBatchModal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save</button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteConfirmationModal" tabindex="-1" aria-labelledby="deleteConfirmationModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteConfirmationModalLabel">Delete Confirmation</h5>
+                <button type="button" class="btn-close" aria-label="Close" @onclick="CloseDeleteConfirmationModal"></button>
+            </div>
+            <div class="modal-body">
+                Are you sure you want to delete this batch?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" @onclick="CloseDeleteConfirmationModal">Cancel</button>
+                <button type="button" class="btn btn-danger" @onclick="ConfirmDeleteBatch">Delete</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string SearchQuery { get; set; } = string.Empty;
+
+    private async Task ShowSuccessToast(string message)
+    {
+        await JSRuntime.InvokeVoidAsync("showSuccess", message);
+    }
+
+    private async Task ShowErrorToast(string message)
+    {
+        await JSRuntime.InvokeVoidAsync("showError", message);
+    }
+
+    private async Task ShowInfoToast(string message)
+    {
+        await JSRuntime.InvokeVoidAsync("showInfo", message);
+    }
+
+    private async Task ShowWarningToast(string message)
+    {
+        await JSRuntime.InvokeVoidAsync("showWarning", message);
+    }
+
+    private List<BatchResponseModel> batches = new List<BatchResponseModel>();
+    private List<BatchResponseModel> paginatedBatches = new List<BatchResponseModel>();
+    private Data.Models.Batch batch = new Data.Models.Batch();
+    private bool isEditing = false;
+    private int batchToDeleteId;
+
+    private int CurrentPage { get; set; } = 1;
+    private int PageSize { get; set; } = 10;
+    private int TotalEntries { get; set; }
+    private int TotalPages { get; set; }
+    private bool HasPreviousPage => CurrentPage > 1;
+    private bool HasNextPage => CurrentPage < TotalPages;
+
+    private int StartEntry => (CurrentPage - 1) * PageSize + 1;
+    private int EndEntry => Math.Min(CurrentPage * PageSize, TotalEntries);
+
+    private string Title => isEditing ? "Edit Batch" : "Add Batch";
+
+    protected override async Task OnInitializedAsync()
+    {
         await LoadBatches();
-        await CloseAddEditBatchModal();
     }
 
-    private async Task ShowModal(string modalId)
+    private async Task LoadBatches()
     {
-        await JSRuntime.InvokeVoidAsync("showModal", modalId);
+        try
+        {
+            // Fetch all batches from the service
+            var allBatches = await BatchService.GetAllBatchesAsync();
+            if (allBatches == null || !allBatches.Any())
+            {
+                batches = new List<BatchResponseModel>();
+            }
+            else
+            {
+                batches = allBatches;
+                FilterBatches();
+                TotalEntries = batches.Count; // Set total entries
+                                              // Calculate the total number of pages
+                TotalPages = (int)Math.Ceiling(TotalEntries / (double)PageSize);
+                // Fetch the data for the current page
+                paginatedBatches = batches.Skip((CurrentPage - 1) * PageSize).Take(PageSize).ToList();
+            }
+            StateHasChanged(); // Force UI to update
+        }
+        catch (Exception ex)
+        {
+            // Handle any exceptions that occur
+            Console.WriteLine($"Error loading data: {ex.Message}");
+        }
     }
 
-    private async Task HideModal(string modalId)
+    private void FilterBatches()
     {
-        await JSRuntime.InvokeVoidAsync("hideModal", modalId);
+        // Filter the batches based on the search query
+        var filteredBatches = batches
+            .Where(b => b.BatchCode.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase) ||
+                        b.BatchTime.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase) ||
+                        b.FacultyName.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase) ||
+                        b.Remarks.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        TotalEntries = filteredBatches.Count; // Update the total entries count
+        TotalPages = (int)Math.Ceiling(TotalEntries / (double)PageSize); // Update total pages
+        paginatedBatches = filteredBatches.Skip((CurrentPage - 1) * PageSize).Take(PageSize).ToList(); // Update paginated batches
+    }
+    private void SearchBatches(ChangeEventArgs e)
+    {
+        SearchQuery = e.Value?.ToString() ?? string.Empty;
+        FilterBatches();
+    }
+    private async Task PreviousPage()
+    {
+        if (HasPreviousPage)
+        {
+            CurrentPage--;
+            await LoadBatches();
+        }
+    }
+
+    private async Task NextPage()
+    {
+        if (HasNextPage)
+        {
+            CurrentPage++;
+            await LoadBatches();
+        }
+    }
+
+    private async Task GoToPage(int pageNumber)
+    {
+        if (pageNumber >= 1 && pageNumber <= TotalPages)
+        {
+            CurrentPage = pageNumber;
+            await LoadBatches();
+        }
+    }
+
+    private void OpenAddBatchModal()
+    {
+        batch = new Data.Models.Batch();
+        isEditing = false;
+        ShowModal("addEditBatchModal");
+    }
+
+    private async Task OpenEditBatchModal(int batchId)
+    {
+        isEditing = true;
+        batch = await BatchService.GetBatchByIdAsync(batchId);
+        ShowModal("addEditBatchModal");
+    }
+
+    private void OpenDeleteConfirmationModal(int batchId)
+    {
+        batchToDeleteId = batchId;
+        ShowModal("deleteConfirmationModal");
+    }
+
+    private void CloseAddEditBatchModal()
+    {
+        HideModal("addEditBatchModal");
+    }
+
+    private void CloseDeleteConfirmationModal()
+    {
+        HideModal("deleteConfirmationModal");
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        try
+        {
+            if (isEditing)
+            {
+                await BatchService.UpdateBatchAsync(batch);
+                await ShowSuccessToast("Batch updated successfully.");
+            }
+            else
+            {
+                await BatchService.CreateBatchAsync(batch);
+                await ShowSuccessToast("Batch added successfully.");
+            }
+            await LoadBatches();
+        }
+        catch (Exception ex)
+        {
+            await ShowErrorToast($"Error saving batch: {ex.Message}");
+        }
+        finally
+        {
+            CloseAddEditBatchModal();
+        }
+    }
+
+    private async Task ConfirmDeleteBatch()
+    {
+        try
+        {
+            await BatchService.DeleteBatchAsync(batchToDeleteId);
+            await ShowSuccessToast("Batch deleted successfully.");
+            await LoadBatches();
+        }
+        catch (Exception ex)
+        {
+            await ShowErrorToast($"Error deleting batch: {ex.Message}");
+        }
+        finally
+        {
+            CloseDeleteConfirmationModal();
+        }
+    }
+
+    private void ShowModal(string modalId)
+    {
+        JSRuntime.InvokeVoidAsync("eval", $"$('#{modalId}').modal('show');");
+    }
+
+    private void HideModal(string modalId)
+    {
+        JSRuntime.InvokeVoidAsync("eval", $"$('#{modalId}').modal('hide');");
     }
 }
- *@
+
+
+
+

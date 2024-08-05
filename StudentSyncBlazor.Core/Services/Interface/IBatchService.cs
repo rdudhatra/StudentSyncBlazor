@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace StudentSyncBlazor.Core.Services.Interface
 {
-    public interface IBatchService
+    public interface IBatchService 
     {
         Task<List<BatchResponseModel>> GetAllBatchesAsync();
         Task<Batch> GetBatchByIdAsync(int id);
