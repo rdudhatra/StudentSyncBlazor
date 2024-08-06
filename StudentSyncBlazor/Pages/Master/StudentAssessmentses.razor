@@ -1,0 +1,268 @@
+﻿@page "/master/assessment/index"
+@using StudentSyncBlazor.Data.Models
+@using StudentSyncBlazor.Core.Services.Interface
+@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Forms
+@using StudentSyncBlazor.Data.ResponseModel
+@inject IJSRuntime JSRuntime
+@inject IStudentAssessmentService StudentAssessmentService
+
+<Breadcrumb Title="Student Assessment" BreadcrumbPageTitle="Courses"></Breadcrumb>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <!-- Search Box and Add Button -->
+                <div class="mb-3 d-flex justify-content-between align-items-center">
+                    <button type="button" class="btn btn-primary mb-3" @onclick="OpenAddAssessmentModal">+</button>
+                    <input type="text" class="form-control mb-3" style="width: 13%;" @bind="SearchQuery" @oninput="SearchAssessments" placeholder="Search..." />
+                 </div>
+
+                <table id="AssessmentTable" class="table table-bordered dt-responsive nowrap" style="width: 100%;">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Assessment Date</th>
+                            <th>Enrollment No</th>
+                            <th>Course Exam ID</th>
+                            <th>Obtained Marks</th>
+                            <th>Remarks</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var assessment in paginatedAssessments)
+                        {
+                            <tr>
+                                <td>@assessment.Id</td>
+                                <td>@assessment.AssessmentDate?.ToShortDateString()</td>
+                                <td>@assessment.EnrollmentNo</td>
+                                <td>@assessment.CourseExamId</td>
+                                <td>@assessment.ObtainedMarks</td>
+                                <td>@assessment.Remarks</td>
+                                <td>
+                                    <button class="btn btn-warning btn-sm" @onclick="() => OpenEditAssessmentModal(assessment.Id)">Edit</button>
+                                    <button class="btn btn-danger btn-sm" @onclick="() => OpenDeleteConfirmationModal(assessment.Id)">Delete</button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+                <!-- Pagination Controls -->
+                <div class="pagination-container d-flex justify-content-between align-items-center mb-3">
+                    <!-- Pagination Message -->
+                    <div class="pagination-message">
+                        Showing @StartEntry to @EndEntry of @TotalEntries entries
+                    </div>
+
+                    <div class="pagination-controls d-flex align-items-center">
+                        <button class="btn btn-secondary me-2" @onclick="PreviousPage" disabled="@(!HasPreviousPage)">Previous</button>
+                        <button class="btn btn-primary me-2" disabled>@CurrentPage</button>
+                        <button class="btn btn-secondary me-2" @onclick="NextPage" disabled="@(!HasNextPage)">Next</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit Assessment Modal -->
+<div class="modal fade" id="addEditAssessmentModal" tabindex="-1" aria-labelledby="addEditAssessmentModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addEditAssessmentModalLabel">@Title</h5>
+                <button type="button" class="btn-close" aria-label="Close" @onclick="CloseAddEditAssessmentModal"></button>
+            </div>
+            <div class="modal-body">
+                <EditForm Model="assessment" OnValidSubmit="HandleValidSubmit">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary />
+                    <div class="form-group">
+                        <label for="AssessmentDate">Assessment Date</label>
+                        <InputDate id="AssessmentDate" class="form-control" @bind-Value="assessment.AssessmentDate" />
+                    </div>
+                    <div class="form-group">
+                        <label for="EnrollmentNo">Enrollment No</label>
+                        <InputText id="EnrollmentNo" class="form-control" @bind-Value="assessment.EnrollmentNo" />
+                    </div>
+                    <div class="form-group">
+                        <label for="CourseExamId">Course Exam ID</label>
+                        <InputNumber id="CourseExamId" class="form-control" @bind-Value="assessment.CourseExamId" />
+                    </div>
+                    <div class="form-group">
+                        <label for="ObtainedMarks">Obtained Marks</label>
+                        <InputNumber id="ObtainedMarks" class="form-control" @bind-Value="assessment.ObtainedMarks" />
+                    </div>
+                    <div class="form-group">
+                        <label for="Remarks">Remarks</label>
+                        <InputTextArea id="Remarks" class="form-control" @bind-Value="assessment.Remarks" />
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CloseAddEditAssessmentModal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save</button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteConfirmationModal" tabindex="-1" aria-labelledby="deleteConfirmationModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteConfirmationModalLabel">Delete Confirmation</h5>
+                <button type="button" class="btn-close" aria-label="Close" @onclick="CloseDeleteConfirmationModal"></button>
+            </div>
+            <div class="modal-body">
+                Are you sure you want to delete this assessment?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" @onclick="CloseDeleteConfirmationModal">Cancel</button>
+                <button type="button" class="btn btn-danger" @onclick="ConfirmDeleteAssessment">Delete</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<StudentAssessmentResponseModel> assessments = new List<StudentAssessmentResponseModel>();
+    private List<StudentAssessmentResponseModel> paginatedAssessments = new List<StudentAssessmentResponseModel>();
+    private StudentAssessment assessment = new StudentAssessment();
+    private bool isEditing = false;
+    private int assessmentToDeleteId;
+    private string SearchQuery { get; set; } = string.Empty;
+    private int CurrentPage { get; set; } = 1;
+    private int PageSize { get; set; } = 10;
+    private int TotalPages { get; set; }
+    private bool HasPreviousPage => CurrentPage > 1;
+    private bool HasNextPage => CurrentPage < TotalPages;
+
+
+    private int StartEntry => (CurrentPage - 1) * PageSize + 1;
+    private int EndEntry => Math.Min(CurrentPage * PageSize, TotalEntries);
+    private int TotalEntries { get; set; }
+
+    private string Title => isEditing ? "Edit Assessment" : "Add Assessment";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAssessments();
+    }
+
+    private async Task LoadAssessments()
+    {
+        try
+        {
+            assessments = (await StudentAssessmentService.GetAllStudentAssessments()).ToList();
+            TotalEntries = assessments.Count;
+            TotalPages = (int)Math.Ceiling(TotalEntries / (double)PageSize);
+            // FilterAssessments();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading data: {ex.Message}");
+        }
+    }
+
+    // private void FilterAssessments()
+    // {
+    //     var filteredAssessments = string.IsNullOrEmpty(SearchQuery)
+    //         ? assessments
+    //         : assessments.Where(a => a.EnrollmentNo.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase)).ToList();
+
+    //     TotalEntries = filteredAssessments.Count;
+    //     TotalPages = (int)Math.Ceiling(TotalEntries / (double)PageSize);
+    //     paginatedAssessments = filteredAssessments.Skip((CurrentPage - 1) * PageSize).Take(PageSize).ToList();
+    // }
+
+    private void SearchAssessments(ChangeEventArgs e)
+    {
+        SearchQuery = e.Value.ToString();
+        // FilterAssessments();
+    }
+
+    private void OpenAddAssessmentModal()
+    {
+        assessment = new StudentAssessment(); // Reset the form
+        isEditing = false;
+        ShowModal("addEditAssessmentModal");
+    }
+
+    private async Task OpenEditAssessmentModal(int id)
+    {
+        isEditing = true;
+        assessment = await StudentAssessmentService.GetStudentAssessmentById(id);
+        ShowModal("addEditAssessmentModal");
+    }
+
+    private async Task OpenDeleteConfirmationModal(int id)
+    {
+        assessmentToDeleteId = id;
+        ShowModal("deleteConfirmationModal");
+    }
+
+    private async Task CloseAddEditAssessmentModal()
+    {
+        await HideModal("addEditAssessmentModal");
+    }
+
+    private async Task CloseDeleteConfirmationModal()
+    {
+        await HideModal("deleteConfirmationModal");
+    }
+
+    private async Task ConfirmDeleteAssessment()
+    {
+        await StudentAssessmentService.DeleteStudentAssessment(assessmentToDeleteId);
+        await LoadAssessments();
+        await CloseDeleteConfirmationModal();
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        if (isEditing)
+        {
+            await StudentAssessmentService.UpdateStudentAssessment(assessment);
+            await JSRuntime.InvokeVoidAsync("toastr.success", "Assessment updated successfully.");
+        }
+        else
+        {
+            await StudentAssessmentService.SaveStudentAssessment(assessment);
+            await JSRuntime.InvokeVoidAsync("toastr.success", "Assessment added successfully.");
+        }
+        await LoadAssessments();
+        await CloseAddEditAssessmentModal();
+    }
+
+    private async Task ShowModal(string modalId)
+    {
+        await JSRuntime.InvokeVoidAsync("showModal", modalId);
+    }
+
+    private async Task HideModal(string modalId)
+    {
+        await JSRuntime.InvokeVoidAsync("hideModal", modalId);
+    }
+
+    private void PreviousPage()
+    {
+        if (CurrentPage > 1)
+        {
+            CurrentPage--;
+            // FilterAssessments();
+        }
+    }
+
+    private void NextPage()
+    {
+        if (CurrentPage < TotalPages)
+        {
+            CurrentPage++;
+            // FilterAssessments();
+        }
+    }
+}

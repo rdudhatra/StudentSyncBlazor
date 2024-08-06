@@ -8,7 +8,7 @@ namespace StudentSyncBlazor.Core.Services.Interface
 {
     public interface ICourseFeeService
     {
-        Task<IEnumerable<CourseFeeResponseModel>> GetAllCourseFeesAsync();
+        Task<List<CourseFeeResponseModel>> GetAllCourseFeesAsync();
         Task<CourseFee> GetCourseFeeByIdAsync(int id);
         Task<int> AddCourseFeeAsync(CourseFee courseFee);
         Task<int> UpdateCourseFeeAsync(CourseFee courseFee);

@@ -9,14 +9,15 @@ public partial class CourseSyllabus
     [Key]
 
     public int Id { get; set; }
-
     public int? CourseId { get; set; }
 
-
+    [Required(ErrorMessage = "ChapterName is required")]
     public string? ChapterName { get; set; }
 
+    [Required(ErrorMessage = "TopicName is required")]
     public string? TopicName { get; set; }
 
+    [Required(ErrorMessage = "Remarks is required")]
     public string? Remarks { get; set; }
 
     public string? CreatedBy { get; set; }

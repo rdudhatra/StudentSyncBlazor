@@ -12,13 +12,18 @@ public partial class CourseExam
 
     public int? CourseId { get; set; }
 
+    [Required(ErrorMessage = "ExamTitle is required")]
     public string? ExamTitle { get; set; }
 
+    [Required(ErrorMessage = "ExamType is required")]
     public string? ExamType { get; set; }
 
+    [Required(ErrorMessage = "TotalMarks is required")]
     public int? TotalMarks { get; set; }
 
+    [Required(ErrorMessage = "PassingMarks is required")]
     public int? PassingMarks { get; set; }
+    [Required(ErrorMessage = "Remarks is required")]
 
     public string? Remarks { get; set; }
 

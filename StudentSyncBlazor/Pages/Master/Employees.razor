@@ -1,4 +1,4 @@
-﻿@page "/master/employee/index"
+﻿@* @page "/master/employee/index"
 @using StudentSyncBlazor.Data.Models
 @using StudentSyncBlazor.Core.Services.Interface
 @using Microsoft.AspNetCore.Components
@@ -211,11 +211,11 @@
     {
         await JSRuntime.InvokeVoidAsync("hideModal", modalId);
     }
-}
+} *@
 
 
 
- @* @page "/master/employee/index"
+ @page "/master/employee/index"
 @using StudentSyncBlazor.Data.Models
 @using StudentSyncBlazor.Core.Services.Interface
 @using Microsoft.AspNetCore.Components
@@ -493,7 +493,7 @@
     private async Task ConfirmDeleteEmployee()
     {
         await EmployeeService.DeleteEmployeeAsync(employeeToDeleteId);
-        await ShowSuccessToast("Employee Deleted successfully.");
+        await JSRuntime.InvokeVoidAsync("toastr.success", "Employee deleted successfully");
         await LoadEmployees();
         await CloseDeleteConfirmationModal();
     }
@@ -503,14 +503,12 @@
         if (isEditing)
         {
             await EmployeeService.UpdateEmployeeAsync(employee);
-            await ShowSuccessToast("Employee updated successfully.");
-
+            await JSRuntime.InvokeVoidAsync("toastr.success", "Employee updated successfully");
         }
         else
         {
             await EmployeeService.AddEmployeeAsync(employee);
-            await ShowSuccessToast("Employee Added successfully.");
-
+            await JSRuntime.InvokeVoidAsync("toastr.success", "Employee Added successfully");
         }
         await LoadEmployees();
         await CloseAddEditEmployeeModal();
@@ -545,4 +543,4 @@
     {
         await JSRuntime.InvokeVoidAsync("showWarning", message);
     }
-} *@
+}

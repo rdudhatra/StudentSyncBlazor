@@ -32,18 +32,34 @@ namespace StudentSyncBlazor.Core.Services
         public async Task<Course> GetCoursesByIdAsync(int id)
         {
             return await _context.Courses.FindAsync(id);
-        }  
-             
+        }
 
 
-     
 
         public async Task<IResult> AddCourseAsync(Course course)
         {
+            if (course.CreatedBy == null)
+            {
+                return Result.Fail("CreatedBy field is required");
+            }
+
+            if (course.CreatedDate == default)
+            {
+                course.CreatedDate = DateTime.Now;
+            }
+
             _context.Courses.Add(course);
             await _context.SaveChangesAsync();
-            return Result.Success("Course added successfully");
+            return Result.Success();
         }
+
+
+        //public async Task<IResult> AddCourseAsync(Course course)
+        //{
+        //    _context.Courses.Add(course);
+        //    await _context.SaveChangesAsync();
+        //    return Result.Success("Course added successfully");
+        //}
 
         public async Task<IResult> UpdateCourseAsync(Course course)
         {

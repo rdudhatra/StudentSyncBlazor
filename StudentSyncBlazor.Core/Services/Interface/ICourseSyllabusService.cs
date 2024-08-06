@@ -8,7 +8,7 @@ namespace StudentSyncBlazor.Core.Services.Interface
 {
     public interface ICourseSyllabusService
     {
-        Task<IEnumerable<CourseSyllabusResponseModel>> GetAllCourseSyllabusesAsync();
+        Task<List<CourseSyllabusResponseModel>> GetAllCourseSyllabusesAsync();
         Task<CourseSyllabus> GetCourseSyllabusByIdAsync(int id);
         Task<int> AddCourseSyllabusAsync(CourseSyllabus courseSyllabus);
         Task<int> UpdateCourseSyllabusAsync(CourseSyllabus courseSyllabus);

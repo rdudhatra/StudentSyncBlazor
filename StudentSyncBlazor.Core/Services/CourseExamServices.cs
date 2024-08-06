@@ -26,33 +26,69 @@ namespace StudentSync.Core.Services
         {
             return _context.CourseExams.ToList();
         }
+        //public async Task<List<CourseExamResponseModel>> GetAllCourseExamsAsync()
+        //{
+        //    var courseExams = await _context.CourseExams
+        //    .Join(_context.Courses,
+        //          ce => ce.CourseId,
+        //          course => course.CourseId,
+        //          (ce, course) => new CourseExamResponseModel
+        //          {
+        //              Id = ce.Id,
+        //              CourseId = ce.CourseId,
+        //              CourseName = course.CourseName,
+        //              ExamTitle = ce.ExamTitle,
+        //              ExamType = ce.ExamType,
+        //              TotalMarks = ce.TotalMarks,
+        //              PassingMarks = ce.PassingMarks,
+        //              Remarks = ce.Remarks,
+        //              CreatedBy = ce.CreatedBy,
+        //              CreatedDate = ce.CreatedDate,
+        //              UpdatedBy = ce.UpdatedBy,
+        //              UpdatedDate = ce.UpdatedDate
+        //          })
+        //    .ToListAsync();
+
+        //    return courseExams;
+        //}
         public async Task<List<CourseExamResponseModel>> GetAllCourseExamsAsync()
         {
             var courseExams = await _context.CourseExams
-            .Join(_context.Courses,
-                  ce => ce.CourseId,
-                  course => course.CourseId,
-                  (ce, course) => new CourseExamResponseModel
+            .Select(ce => new CourseExamResponseModel
                   {
                       Id = ce.Id,
-                      CourseId = ce.CourseId,
-                      CourseName = course.CourseName,
                       ExamTitle = ce.ExamTitle,
                       ExamType = ce.ExamType,
                       TotalMarks = ce.TotalMarks,
                       PassingMarks = ce.PassingMarks,
                       Remarks = ce.Remarks,
-                      CreatedBy = ce.CreatedBy,
-                      CreatedDate = ce.CreatedDate,
-                      UpdatedBy = ce.UpdatedBy,
-                      UpdatedDate = ce.UpdatedDate
+                  
                   })
             .ToListAsync();
 
             return courseExams;
         }
+        //public async Task<List<BatchResponseModel>> GetAllBatchesAsync()
+        //{
+        //    var batches = await _context.Batches
+        //        .Select(b => new BatchResponseModel
+        //        {
+        //            Id = b.Id,
+        //            BatchCode = b.BatchCode,
+        //            BatchTime = b.BatchTime,
+        //            FacultyName = b.FacultyName,
+        //            Remarks = b.Remarks
+        //        })
+        //        .ToListAsync();
 
+        //    if (batches == null || !batches.Any())
+        //    {
+        //        Console.WriteLine("No data returned from service.");
+        //        return new List<BatchResponseModel>();
+        //    }
 
+        //    return batches;
+        //}
 
         public async Task<CourseExam> GetCourseExamByIdAsync(int id)
         {

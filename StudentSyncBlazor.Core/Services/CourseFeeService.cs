@@ -27,33 +27,51 @@ namespace StudentSync.Core.Services
             return _context.CourseFees.ToList();
         }
 
-  
-        public async Task<IEnumerable<CourseFeeResponseModel>> GetAllCourseFeesAsync()
+
+        //public async Task<List<CourseFeeResponseModel>> GetAllCourseFeesAsync()
+        //{
+        //    var courseFees = await _context.CourseFees
+        //   .Join(_context.Courses,
+        //         courseFee => courseFee.CourseId,
+        //         course => course.CourseId,
+        //         (courseFee, course) => new CourseFeeResponseModel
+        //         {
+        //             Id = courseFee.Id,
+        //             CourseId = courseFee.CourseId,
+        //             CourseName = course.CourseName,
+        //             TotalFees = courseFee.TotalFees,
+        //             DownPayment = courseFee.DownPayment,
+        //             NoofInstallment = courseFee.NoofInstallment,
+        //             InstallmentAmount = courseFee.InstallmentAmount,
+        //             Remarks = courseFee.Remarks,
+        //             CreatedBy = courseFee.CreatedBy,
+        //             CreatedDate = courseFee.CreatedDate,
+        //             UpdatedBy = courseFee.UpdatedBy,
+        //             UpdatedDate = courseFee.UpdatedDate
+        //         })
+        //   .ToListAsync();
+
+        //    return courseFees;
+        //}
+
+        public async Task<List<CourseFeeResponseModel>> GetAllCourseFeesAsync()
         {
             var courseFees = await _context.CourseFees
-           .Join(_context.Courses,
-                 courseFee => courseFee.CourseId,
-                 course => course.CourseId,
-                 (courseFee, course) => new CourseFeeResponseModel
+           .Select(courseFee => new CourseFeeResponseModel
                  {
+
                      Id = courseFee.Id,
-                     CourseId = courseFee.CourseId,
-                     CourseName = course.CourseName,
                      TotalFees = courseFee.TotalFees,
                      DownPayment = courseFee.DownPayment,
                      NoofInstallment = courseFee.NoofInstallment,
                      InstallmentAmount = courseFee.InstallmentAmount,
                      Remarks = courseFee.Remarks,
-                     CreatedBy = courseFee.CreatedBy,
-                     CreatedDate = courseFee.CreatedDate,
-                     UpdatedBy = courseFee.UpdatedBy,
-                     UpdatedDate = courseFee.UpdatedDate
+                 
                  })
            .ToListAsync();
 
             return courseFees;
         }
-
         public async Task<CourseFee> GetCourseFeeByIdAsync(int id)
         {
             return await _context.CourseFees.FindAsync(id);

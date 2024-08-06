@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using StudentSyncBlazor.Core.Services.Interfaces;
 using StudentSyncBlazor.Data.Data;
 using StudentSyncBlazor.Data.Models;
+using StudentSyncBlazor.Data.ResponseModel;
 using System.Collections.Generic;
 using System.Data;
 using System.Threading.Tasks;
@@ -22,8 +23,28 @@ namespace StudentSync.Core.Services
         {
             return await _context.StudentInstallments.ToListAsync();
         }
+        //public async Task<IEnumerable<StudentInstallmentResponseModel>> GetAllStudentInstallmentsAsync()
+        //{
+        //    var studentInstallment = await _context.StudentInstallments
+        //        .Select(studentInstallment => new StudentInstallmentResponseModel
+        //        {
 
-    
+        //            Id = studentInstallment.Id,
+        //            ReceiptNo = studentInstallment.ReceiptNo,
+        //            ReceiptDate = studentInstallment.ReceiptDate,
+        //            Amount = studentInstallment.Amount,
+        //            EnrollmentNo = studentInstallment.EnrollmentNo,
+        //            TransactionMode = studentInstallment.TransactionMode,
+        //            BankName = studentInstallment.BankName,
+        //            Ifsccode = studentInstallment.Ifsccode,
+        //            BranchName  = studentInstallment.BranchName,
+        //            ChequeTranNo = studentInstallment.ChequeTranNo,
+        //            Remarks = studentInstallment.Remarks,
+        //        } )
+        //        .ToListAsync();
+        //    return studentInstallment;
+        //}
+
         public async Task<StudentInstallment> GetStudentInstallmentByIdAsync(int id)
         {
 

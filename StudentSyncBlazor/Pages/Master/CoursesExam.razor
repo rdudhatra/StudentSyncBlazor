@@ -1,0 +1,295 @@
+﻿@page "/master/course-exam/index"
+@using StudentSyncBlazor.Data.Models
+@using StudentSyncBlazor.Core.Services.Interface
+@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Forms
+@using StudentSyncBlazor.Data.ResponseModel
+@inject IJSRuntime JSRuntime
+@inject ICourseExamServices CourseExamService
+
+<Breadcrumb Title="CourseExam" BreadcrumbPageTitle="Courses"></Breadcrumb>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <!-- Search Box and Add Button -->
+                <div class="mb-3 d-flex justify-content-between align-items-center">
+                    <button type="button" class="btn btn-primary ms-3" @onclick="OpenAddCourseExamModal">+</button>
+                    <input type="text" class="form-control" style="width: 13%;" placeholder="Search..." @bind="SearchQuery" @oninput="SearchCourseExams" />
+                </div>
+                <table id="CourseExamTable" class="table table-bordered dt-responsive nowrap" style="width: 100%;">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Exam Title</th>
+                            <th>Exam Type</th>
+                            <th>Total Marks</th>
+                            <th>Passing Marks</th>
+                            <th>Remarks</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var exam in paginatedCourseExams)
+                        {
+                            <tr>
+                                <td>@exam.Id</td>
+                                <td>@exam.ExamTitle</td>
+                                <td>@exam.ExamType</td>
+                                <td>@exam.TotalMarks</td>
+                                <td>@exam.PassingMarks</td>
+                                <td>@exam.Remarks</td>
+                                <td>
+                                    <button class="btn btn-warning btn-sm" @onclick="() => OpenEditCourseExamModal(exam.Id)">Edit</button>
+                                    <button class="btn btn-danger btn-sm" @onclick="() => OpenDeleteConfirmationModal(exam.Id)">Delete</button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+                <!-- Pagination Controls -->
+                <div class="pagination-container d-flex justify-content-between align-items-center mb-3">
+                    <!-- Pagination Message -->
+                    <div class="pagination-message">
+                        Showing @StartEntry to @EndEntry of @TotalEntries entries
+                    </div>
+
+                    <div class="pagination-controls d-flex align-items-center">
+                        <button class="btn btn-secondary me-2" @onclick="PreviousPage" disabled="@(!HasPreviousPage)">Previous</button>
+                        <button class="btn btn-primary me-2" disabled>@CurrentPage</button>
+                        <button class="btn btn-secondary me-2" @onclick="NextPage" disabled="@(!HasNextPage)">Next</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit Course Exam Modal -->
+<div class="modal fade" id="addEditCourseExamModal" tabindex="-1" aria-labelledby="addEditCourseExamModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addEditCourseExamModalLabel">@Title</h5>
+                <button type="button" class="btn-close" aria-label="Close" @onclick="CloseAddEditCourseExamModal"></button>
+            </div>
+            <div class="modal-body">
+                <EditForm Model="courseExam" OnValidSubmit="HandleValidSubmit">
+                    <DataAnnotationsValidator />
+                    <div class="form-group">
+                        <label for="ExamTitle">Exam Title</label>
+                        <InputText id="ExamTitle" class="form-control" @bind-Value="courseExam.ExamTitle" />
+                        <ValidationMessage For="@(() => courseExam.ExamTitle)" />
+
+                    </div>
+                    <div class="form-group">
+                        <label for="ExamType">Exam Type</label>
+                        <InputText id="ExamType" class="form-control" @bind-Value="courseExam.ExamType" />
+                        <ValidationMessage For="@(() => courseExam.ExamType)" />
+
+                    </div>
+                    <div class="form-group">
+                        <label for="TotalMarks">Total Marks</label>
+                        <InputNumber id="TotalMarks" class="form-control" @bind-Value="courseExam.TotalMarks" />
+                        <ValidationMessage For="@(() => courseExam.TotalMarks)" />
+
+                    </div>
+                    <div class="form-group">
+                        <label for="PassingMarks">Passing Marks</label>
+                        <InputNumber id="PassingMarks" class="form-control" @bind-Value="courseExam.PassingMarks" />
+                        <ValidationMessage For="@(() => courseExam.PassingMarks)" />
+
+                    </div>
+                    <div class="form-group">
+                        <label for="Remarks">Remarks</label>
+                        <InputTextArea id="Remarks" class="form-control" @bind-Value="courseExam.Remarks" />
+                        <ValidationMessage For="@(() => courseExam.Remarks)" />
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CloseAddEditCourseExamModal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save</button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteConfirmationModal" tabindex="-1" aria-labelledby="deleteConfirmationModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteConfirmationModalLabel">Delete Confirmation</h5>
+                <button type="button" class="btn-close" aria-label="Close" @onclick="CloseDeleteConfirmationModal"></button>
+            </div>
+            <div class="modal-body">
+                Are you sure you want to delete this course exam?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" @onclick="CloseDeleteConfirmationModal">Cancel</button>
+                <button type="button" class="btn btn-danger" @onclick="ConfirmDeleteCourseExam">Delete</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string SearchQuery { get; set; } = string.Empty;
+
+    private List<CourseExamResponseModel> courseExams = new List<CourseExamResponseModel>();
+    private List<CourseExamResponseModel> paginatedCourseExams = new List<CourseExamResponseModel>();
+    private CourseExam courseExam = new CourseExam();
+    private bool isEditing = false;
+    private int courseExamToDeleteId;
+
+    private int CurrentPage { get; set; } = 1;
+    private int PageSize { get; set; } = 10;
+    private int TotalPages { get; set; }
+    private bool HasPreviousPage => CurrentPage > 1;
+    private bool HasNextPage => CurrentPage < TotalPages;
+
+    private int StartEntry => (CurrentPage - 1) * PageSize + 1;
+    private int EndEntry => Math.Min(CurrentPage * PageSize, TotalEntries); private int TotalEntries { get; set; }
+
+
+    private string Title => isEditing ? "Edit Course Exam" : "Add Course Exam";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCourseExams();
+    }
+
+    private async Task LoadCourseExams()
+    {
+        try
+        {
+            var allCourseExams = await CourseExamService.GetAllCourseExamsAsync();
+            if (allCourseExams == null || !allCourseExams.Any())
+            {
+                Console.WriteLine("No data returned from service.");
+                courseExams = new List<CourseExamResponseModel>();
+            }
+            else
+            {
+                Console.WriteLine($"Data loaded: {allCourseExams.Count} items.");
+                courseExams = allCourseExams;
+                TotalEntries = courseExams.Count;
+                FilterCourseExams();
+                TotalPages = (int)Math.Ceiling(courseExams.Count / (double)PageSize);
+                paginatedCourseExams = courseExams.Skip((CurrentPage - 1) * PageSize).Take(PageSize).ToList();
+            }
+            StateHasChanged(); // Force UI to update
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading data: {ex.Message}");
+        }
+    }
+    private void FilterCourseExams()
+    {
+        if (!string.IsNullOrEmpty(SearchQuery))
+        {
+            var filteredCourseexam = courseExams.Where(exam =>
+                exam.ExamTitle.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase) ||
+                exam.ExamType.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase) ||
+                exam.Remarks.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase)).ToList();
+
+            TotalEntries = filteredCourseexam.Count;
+            TotalPages = (int)Math.Ceiling(TotalEntries / (double)PageSize);
+            paginatedCourseExams = filteredCourseexam.Skip((CurrentPage - 1) * PageSize).Take(PageSize).ToList();
+
+        }
+    }
+    private async Task SearchCourseExams(ChangeEventArgs e)
+    {
+        SearchQuery = e.Value?.ToString() ?? string.Empty;
+        FilterCourseExams();
+    }
+  
+    private async Task PreviousPage()
+    {
+        if (HasPreviousPage)
+        {
+            CurrentPage--;
+            await LoadCourseExams();
+        }
+    }
+
+    private async Task NextPage()
+    {
+        if (HasNextPage)
+        {
+            CurrentPage++;
+            await LoadCourseExams();
+        }
+    }
+
+    private void OpenAddCourseExamModal()
+    {
+        courseExam = new CourseExam();
+        isEditing = false;
+        ShowModal("addEditCourseExamModal");
+    }
+
+    private async Task OpenEditCourseExamModal(int courseExamId)
+    {
+        isEditing = true;
+        courseExam = await CourseExamService.GetCourseExamByIdAsync(courseExamId);
+        ShowModal("addEditCourseExamModal");
+    }
+
+    private async Task OpenDeleteConfirmationModal(int courseExamId)
+    {
+        courseExamToDeleteId = courseExamId;
+        ShowModal("deleteConfirmationModal");
+    }
+
+    private async Task CloseAddEditCourseExamModal()
+    {
+        await HideModal("addEditCourseExamModal");
+    }
+
+    private async Task CloseDeleteConfirmationModal()
+    {
+        await HideModal("deleteConfirmationModal");
+    }
+
+    private async Task ConfirmDeleteCourseExam()
+    {
+        await CourseExamService.DeleteCourseExamAsync(courseExamToDeleteId);
+        await JSRuntime.InvokeVoidAsync("toastr.success", "CourseExam Deleted successfully");
+
+        await LoadCourseExams();
+        await CloseDeleteConfirmationModal();
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        if (isEditing)
+        {
+            await CourseExamService.UpdateCourseExamAsync(courseExam);
+            await JSRuntime.InvokeVoidAsync("toastr.success", "CourseExam Updated successfully");
+
+        }
+        else
+        {
+            await CourseExamService.AddCourseExamAsync(courseExam);
+            await JSRuntime.InvokeVoidAsync("toastr.success", "CourseExam Added successfully");
+
+        }
+        await LoadCourseExams();
+        await CloseAddEditCourseExamModal();
+    }
+
+    private async Task ShowModal(string modalId)
+    {
+        await JSRuntime.InvokeVoidAsync("showModal", modalId);
+    }
+
+    private async Task HideModal(string modalId)
+    {
+        await JSRuntime.InvokeVoidAsync("hideModal", modalId);
+    }
+}

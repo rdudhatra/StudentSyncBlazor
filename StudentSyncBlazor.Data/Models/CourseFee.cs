@@ -11,13 +11,13 @@ public partial class CourseFee
 
     public int? CourseId { get; set; }
 
-
+    [Required(ErrorMessage = "TotalFees is required")]
     public decimal? TotalFees { get; set; }
-
+    [Required(ErrorMessage = "DownPayment is required")]
     public decimal? DownPayment { get; set; }
-
+    [Required(ErrorMessage = "NoofInstallment is required")]
     public int? NoofInstallment { get; set; }
-
+    [Required(ErrorMessage = "InstallmentAmount is required")]
     public decimal? InstallmentAmount { get; set; }
 
     public string? Remarks { get; set; }
