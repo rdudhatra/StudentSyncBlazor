@@ -33,7 +33,6 @@
                             <div class="p-2 mt-4">
                                 <EditForm Model="registerModel" OnValidSubmit="HandleValidSubmit">
                                     <DataAnnotationsValidator />
-                                    <ValidationSummary />
 
                                     @if (!string.IsNullOrEmpty(errorMessage))
                                     {

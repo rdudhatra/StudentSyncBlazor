@@ -894,27 +894,6 @@
 
 @code {
     private string SearchQuery { get; set; } = string.Empty;
-
-    private async Task ShowSuccessToast(string message)
-    {
-        await JSRuntime.InvokeVoidAsync("showSuccess", message);
-    }
-
-    private async Task ShowErrorToast(string message)
-    {
-        await JSRuntime.InvokeVoidAsync("showError", message);
-    }
-
-    private async Task ShowInfoToast(string message)
-    {
-        await JSRuntime.InvokeVoidAsync("showInfo", message);
-    }
-
-    private async Task ShowWarningToast(string message)
-    {
-        await JSRuntime.InvokeVoidAsync("showWarning", message);
-    }
-
     private List<BatchResponseModel> batches = new List<BatchResponseModel>();
     private List<BatchResponseModel> paginatedBatches = new List<BatchResponseModel>();
     private Data.Models.Batch batch = new Data.Models.Batch();
@@ -1094,6 +1073,26 @@
     private void HideModal(string modalId)
     {
         JSRuntime.InvokeVoidAsync("eval", $"$('#{modalId}').modal('hide');");
+    }
+
+    private async Task ShowSuccessToast(string message)
+    {
+        await JSRuntime.InvokeVoidAsync("showSuccess", message);
+    }
+
+    private async Task ShowErrorToast(string message)
+    {
+        await JSRuntime.InvokeVoidAsync("showError", message);
+    }
+
+    private async Task ShowInfoToast(string message)
+    {
+        await JSRuntime.InvokeVoidAsync("showInfo", message);
+    }
+
+    private async Task ShowWarningToast(string message)
+    {
+        await JSRuntime.InvokeVoidAsync("showWarning", message);
     }
 }
 

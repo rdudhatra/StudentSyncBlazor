@@ -1,0 +1,287 @@
+﻿@page "/enrollment"
+@using StudentSyncBlazor.Core.Services.Interface
+@using StudentSyncBlazor.Data.Models
+@using StudentSyncBlazor.Data.ResponseModel
+@inject IJSRuntime JSRuntime
+@inject IEnrollmentService EnrollmentService
+
+<Breadcrumb Title="Enrollment Management" BreadcrumbPageTitle="Enrollments"></Breadcrumb>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <!-- Search Box and Add Button -->
+                <div class="mb-3 d-flex justify-content-between align-items-center">
+                    <button type="button" class="btn btn-primary mb-3" @onclick="OpenAddEnrollmentModal">+</button>
+                    <input type="text" class="form-control mb-3" style="width: 13%;" @bind="SearchQuery" @oninput="SearchEnrollments" placeholder="Search..." />
+                </div>
+
+                <table id="EnrollmentTable" class="table table-bordered dt-responsive nowrap" style="width: 100%;">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Enrollment No</th>
+                            <th>Enrollment Date</th>
+                            <th>Batch Code</th>
+                            <th>Inquiry No</th>
+                            <th>Remarks</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var enrollment in paginatedEnrollments)
+                        {
+                            <tr>
+                                <td>@enrollment.Id</td>
+                                <td>@enrollment.EnrollmentNo</td>
+                                <td>@enrollment.EnrollmentDate?.ToShortDateString()</td>
+                                <td>@enrollment.BatchId</td>
+                                <td>@enrollment.InquiryNo</td>
+                                <td>@enrollment.Remarks</td>
+                                <td>
+                                    <button class="btn btn-warning btn-sm" @onclick="() => OpenEditEnrollmentModal(enrollment.Id)">Edit</button>
+                                    <button class="btn btn-danger btn-sm" @onclick="() => OpenDeleteConfirmationModal(enrollment.Id)">Delete</button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+                <!-- Pagination Controls -->
+                <div class="pagination-container d-flex justify-content-between align-items-center mb-3">
+                    <div class="pagination-message">
+                        Showing @StartEntry to @EndEntry of @TotalEntries entries
+                    </div>
+                    <div class="pagination-controls d-flex align-items-center">
+                        <button class="btn btn-secondary me-2" @onclick="PreviousPage" disabled="@(!HasPreviousPage)">Previous</button>
+                        <button class="btn btn-primary me-2" disabled>@CurrentPage</button>
+                        <button class="btn btn-secondary me-2" @onclick="NextPage" disabled="@(!HasNextPage)">Next</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit Enrollment Modal -->
+<div class="modal fade" id="addEditEnrollmentModal" tabindex="-1" aria-labelledby="addEditEnrollmentModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addEditEnrollmentModalLabel">@Title</h5>
+                <button type="button" class="btn-close" aria-label="Close" @onclick="CloseAddEditEnrollmentModal"></button>
+            </div>
+            <div class="modal-body">
+                <EditForm Model="enrollment" OnValidSubmit="HandleValidSubmit">
+                    <DataAnnotationsValidator />
+                    <div class="form-group">
+                        <label for="EnrollmentNo">Enrollment No</label>
+                        <InputText id="EnrollmentNo" class="form-control" @bind-Value="enrollment.EnrollmentNo" />
+                        <ValidationMessage For="@(() => enrollment.EnrollmentNo)" />
+                    </div>
+                    <div class="form-group">
+                        <label for="EnrollmentDate">Enrollment Date</label>
+                        <InputDate id="EnrollmentDate" class="form-control" @bind-Value="enrollment.EnrollmentDate" />
+                        <ValidationMessage For="@(() => enrollment.EnrollmentDate)" />
+                    </div>
+                    <div class="form-group">
+                        <label for="BatchId">Batch Code</label>
+                        <InputNumber id="BatchId" class="form-control" @bind-Value="enrollment.BatchId" />
+                        <ValidationMessage For="@(() => enrollment.BatchId)" />
+                    </div>
+                    <div class="form-group">
+                        <label for="InquiryNo">Inquiry No</label>
+                        <InputNumber id="InquiryNo" class="form-control" @bind-Value="enrollment.InquiryNo" />
+                        <ValidationMessage For="@(() => enrollment.InquiryNo)" />
+
+                    </div>
+                    <div class="form-group">
+                        <label for="Remarks">Remarks</label>
+                        <InputTextArea id="Remarks" class="form-control" @bind-Value="enrollment.Remarks" />
+                        <ValidationMessage For="@(() => enrollment.Remarks)" />
+
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CloseAddEditEnrollmentModal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save</button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteConfirmationModal" tabindex="-1" aria-labelledby="deleteConfirmationModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteConfirmationModalLabel">Delete Confirmation</h5>
+                <button type="button" class="btn-close" aria-label="Close" @onclick="CloseDeleteConfirmationModal"></button>
+            </div>
+            <div class="modal-body">
+                Are you sure you want to delete this enrollment?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" @onclick="CloseDeleteConfirmationModal">Cancel</button>
+                <button type="button" class="btn btn-danger" @onclick="ConfirmDeleteEnrollment">Delete</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<EnrollmentResponseModel> enrollments = new List<EnrollmentResponseModel>();
+    private List<EnrollmentResponseModel> paginatedEnrollments = new List<EnrollmentResponseModel>();
+    private Enrollment enrollment = new Enrollment();
+    private bool isEditing = false;
+    private int enrollmentToDeleteId;
+    private string SearchQuery { get; set; } = string.Empty;
+    private int CurrentPage { get; set; } = 1;
+    private int PageSize { get; set; } = 10;
+    private int TotalPages { get; set; }
+    private bool HasPreviousPage => CurrentPage > 1;
+    private bool HasNextPage => CurrentPage < TotalPages;
+    private int StartEntry => (CurrentPage - 1) * PageSize + 1;
+    private int EndEntry => Math.Min(CurrentPage * PageSize, TotalEntries);
+    private int TotalEntries { get; set; }
+    private string Title => isEditing ? "Edit Enrollment" : "Add Enrollment";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadEnrollments();
+    }
+
+    private async Task LoadEnrollments()
+    {
+        try
+        {
+            enrollments = (await EnrollmentService.GetAllEnrollments()).ToList();
+            TotalEntries = enrollments.Count;
+            TotalPages = (int)Math.Ceiling(TotalEntries / (double)PageSize);
+            FilterEnrollments();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading data: {ex.Message}");
+        }
+    }
+
+    private void FilterEnrollments()
+    {
+        var filteredEnrollments = string.IsNullOrEmpty(SearchQuery)
+            ? enrollments
+            : enrollments.Where(e => e.EnrollmentNo.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase)).ToList();
+
+        TotalEntries = filteredEnrollments.Count;
+        TotalPages = (int)Math.Ceiling(TotalEntries / (double)PageSize);
+        paginatedEnrollments = filteredEnrollments.Skip((CurrentPage - 1) * PageSize).Take(PageSize).ToList();
+    }
+
+    private void SearchEnrollments(ChangeEventArgs e)
+    {
+        SearchQuery = e.Value.ToString();
+        FilterEnrollments();
+    }
+
+    private void OpenAddEnrollmentModal()
+    {
+        enrollment = new Enrollment(); // Reset the form
+        isEditing = false;
+        ShowModal("addEditEnrollmentModal");
+    }
+
+    private void OpenEditEnrollmentModal(int enrollmentId)
+    {
+        var enrollmentToEdit = enrollments.FirstOrDefault(e => e.Id == enrollmentId);
+        if (enrollmentToEdit != null)
+        {
+            enrollment = new Enrollment
+            {
+                Id = enrollmentToEdit.Id,
+                EnrollmentNo = enrollmentToEdit.EnrollmentNo,
+                EnrollmentDate = enrollmentToEdit.EnrollmentDate,
+                BatchId = enrollmentToEdit.BatchId,
+                InquiryNo = enrollmentToEdit.InquiryNo,
+                    Remarks = enrollmentToEdit.Remarks
+            };
+            isEditing = true;
+            ShowModal("addEditEnrollmentModal");
+        }
+    }
+
+    private void OpenDeleteConfirmationModal(int enrollmentId)
+    {
+        enrollmentToDeleteId = enrollmentId;
+        ShowModal("deleteConfirmationModal");
+    }
+
+    private void CloseAddEditEnrollmentModal()
+    {
+        HideModal("addEditEnrollmentModal");
+    }
+
+    private void CloseDeleteConfirmationModal()
+    {
+        HideModal("deleteConfirmationModal");
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        if (isEditing)
+        {
+            await EnrollmentService.UpdateEnrollment(enrollment);
+            await JSRuntime.InvokeVoidAsync("toastr.success", "Inquiry update successfully.");
+
+        }
+        else
+        {
+            await EnrollmentService.AddEnrollment(enrollment);
+            await JSRuntime.InvokeVoidAsync("toastr.success", "Inquiry added successfully.");
+
+        }
+        await LoadEnrollments();
+        CloseAddEditEnrollmentModal();
+    }
+
+    private async Task ConfirmDeleteEnrollment()
+    {
+        await EnrollmentService.DeleteEnrollment(enrollmentToDeleteId);
+        await JSRuntime.InvokeVoidAsync("toastr.success", "Inquiry deleted successfully.");
+
+        await LoadEnrollments();
+        CloseDeleteConfirmationModal();
+    }
+
+    private void PreviousPage()
+    {
+        if (HasPreviousPage)
+        {
+            CurrentPage--;
+            FilterEnrollments();
+        }
+    }
+
+    private void NextPage()
+    {
+        if (HasNextPage)
+        {
+            CurrentPage++;
+            FilterEnrollments();
+        }
+    }
+    
+    private void ShowModal(string modalId)
+    {
+        JSRuntime.InvokeVoidAsync("ShowModal", modalId);
+    }
+
+    private void HideModal(string modalId)
+    {
+        JSRuntime.InvokeVoidAsync("HideModal", modalId);
+    }
+}
+
+
+
+       

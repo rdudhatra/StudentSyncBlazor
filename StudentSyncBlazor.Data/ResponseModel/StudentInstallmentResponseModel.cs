@@ -37,5 +37,7 @@ namespace StudentSyncBlazor.Data.ResponseModel
         public string? UpdatedBy { get; set; }
 
         public DateTime? UpdatedDate { get; set; }
+
+
     }
 }

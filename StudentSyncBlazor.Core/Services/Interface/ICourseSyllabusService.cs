@@ -13,5 +13,7 @@ namespace StudentSyncBlazor.Core.Services.Interface
         Task<int> AddCourseSyllabusAsync(CourseSyllabus courseSyllabus);
         Task<int> UpdateCourseSyllabusAsync(CourseSyllabus courseSyllabus);
         Task<bool> DeleteCourseSyllabusAsync(int id);
+        Task<int> GetTotalCourseSyllabusAsync();
+
     }
 }

@@ -1,0 +1,294 @@
+﻿@page "/master/inquiry/index"
+@using StudentSyncBlazor.Data.Models
+@using StudentSyncBlazor.Core.Services.Interface
+@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Forms
+@using StudentSyncBlazor.Data.ResponseModel
+@inject IJSRuntime JSRuntime
+@inject IInquiryService InquiryService
+
+<Breadcrumb Title="Inquiry" BreadcrumbPageTitle="Inquiries"></Breadcrumb>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <!-- Search Box and Add Button -->
+                <div class="mb-3 d-flex justify-content-between align-items-center">
+                    <button type="button" class="btn btn-primary mb-3" @onclick="OpenAddInquiryModal">+</button>
+                    <input type="text" class="form-control mb-3" style="width: 13%;" @bind="SearchQuery" @oninput="SearchInquiries" placeholder="Search..." />
+                </div>
+                <table id="InquiryTable" class="table table-bordered dt-responsive nowrap" style="width: 100%;">
+                    <thead>
+                        <tr>
+                            <th>Inquiry No</th>
+                            <th>Inquiry Date</th>
+                            <th>Title</th>
+                            <th>First Name</th>
+                            <th>Last Name</th>
+                            <th>Contact No</th>
+                            <th>Email ID</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var inquiry in paginatedInquiries)
+                        {
+                            <tr>
+                                <td>@inquiry.InquiryNo</td>
+                                <td>@inquiry.InquiryDate?.ToString("MM/dd/yyyy")</td>
+                                <td>@inquiry.Title</td>
+                                <td>@inquiry.FirstName</td>
+                                <td>@inquiry.LastName</td>
+                                <td>@inquiry.ContactNo</td>
+                                <td>@inquiry.EmailId</td>
+                                <td>@inquiry.Status</td>
+                                <td>
+                                    <button class="btn btn-warning btn-sm" @onclick="() => OpenEditInquiryModal(inquiry.InquiryNo)">Edit</button>
+                                    <button class="btn btn-danger btn-sm" @onclick="() => OpenDeleteConfirmationModal(inquiry.InquiryNo)">Delete</button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+                <!-- Pagination Controls -->
+                <div class="pagination-container d-flex justify-content-between align-items-center mb-3">
+                    <!-- Pagination Message -->
+                    <div class="pagination-message">
+                        Showing @StartEntry to @EndEntry of @TotalEntries entries
+                    </div>
+
+                    <div class="pagination-controls d-flex align-items-center">
+                        <button class="btn btn-secondary me-2" @onclick="PreviousPage" disabled="@(!HasPreviousPage)">Previous</button>
+                        <button class="btn btn-primary me-2" disabled>@CurrentPage</button>
+                        <button class="btn btn-secondary me-2" @onclick="NextPage" disabled="@(!HasNextPage)">Next</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit Inquiry Modal -->
+<div class="modal fade" id="addEditInquiryModal" tabindex="-1" aria-labelledby="addEditInquiryModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addEditInquiryModalLabel">@Title</h5>
+                <button type="button" class="btn-close" aria-label="Close" @onclick="CloseAddEditInquiryModal"></button>
+            </div>
+            <div class="modal-body">
+                <EditForm Model="inquiry" OnValidSubmit="HandleValidSubmit">
+                    <DataAnnotationsValidator />
+                    <div class="form-group">
+                        <label for="InquiryDate">Inquiry Date</label>
+                        <InputDate id="InquiryDate" class="form-control" @bind-Value="inquiry.InquiryDate" />
+                        <ValidationMessage For="@(() => inquiry.InquiryDate)" />
+
+                    </div>
+                    <div class="form-group">
+                        <label for="Title">Title</label>
+                        <InputText id="Title" class="form-control" @bind-Value="inquiry.Title" />
+                        <ValidationMessage For="@(() => inquiry.Title)" />
+
+                    </div>
+                    <div class="form-group">
+                        <label for="FirstName">First Name</label>
+                        <InputText id="FirstName" class="form-control" @bind-Value="inquiry.FirstName" />
+                        <ValidationMessage For="@(() => inquiry.FirstName)" />
+
+                    </div>
+                    <div class="form-group">
+                        <label for="LastName">Last Name</label>
+                        <InputText id="LastName" class="form-control" @bind-Value="inquiry.LastName" />
+                        <ValidationMessage For="@(() => inquiry.LastName)" />
+
+                    </div>
+                    <div class="form-group">
+                        <label for="ContactNo">Contact No</label>
+                        <InputText id="ContactNo" class="form-control" @bind-Value="inquiry.ContactNo" />
+                        <ValidationMessage For="@(() => inquiry.ContactNo)" />
+
+                    </div>
+                    <div class="form-group">
+                        <label for="EmailId">Email ID</label>
+                        <InputText id="EmailId" class="form-control" @bind-Value="inquiry.EmailId" />
+                        <ValidationMessage For="@(() => inquiry.EmailId)" />
+
+                    </div>
+                    <div class="form-group">
+                        <label for="Status">Status</label>
+                        <InputText id="Status" class="form-control" @bind-Value="inquiry.Status" />
+                        <ValidationMessage For="@(() => inquiry.Status)" />
+
+                    </div>
+                    <!-- Add other fields as necessary -->
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CloseAddEditInquiryModal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save</button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteConfirmationModal" tabindex="-1" aria-labelledby="deleteConfirmationModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteConfirmationModalLabel">Delete Confirmation</h5>
+                <button type="button" class="btn-close" aria-label="Close" @onclick="CloseDeleteConfirmationModal"></button>
+            </div>
+            <div class="modal-body">
+                Are you sure you want to delete this inquiry?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" @onclick="CloseDeleteConfirmationModal">Cancel</button>
+                <button type="button" class="btn btn-danger" @onclick="ConfirmDeleteInquiry">Delete</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private IList<InquiryResponseModel> inquiries = new List<InquiryResponseModel>();
+    private IList<InquiryResponseModel> paginatedInquiries = new List<InquiryResponseModel>();
+    private Inquiry inquiry = new Inquiry();
+    private bool isEditing = false;
+    private int inquiryToDeleteId;
+    private string SearchQuery { get; set; } = string.Empty;
+    private int CurrentPage { get; set; } = 1;
+    private int PageSize { get; set; } = 10;
+    private int TotalPages { get; set; }
+    private bool HasPreviousPage => CurrentPage > 1;
+    private bool HasNextPage => CurrentPage < TotalPages;
+
+    private int StartEntry => (CurrentPage - 1) * PageSize + 1;
+    private int EndEntry => Math.Min(CurrentPage * PageSize, TotalEntries);
+    private int TotalEntries { get; set; }
+
+    private string Title => isEditing ? "Edit Inquiry" : "Add Inquiry";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadInquiries();
+    }
+
+    private async Task LoadInquiries()
+    {
+        try
+        {
+            inquiries = (await InquiryService.GetAllInquiriesAsync()).ToList();
+            TotalEntries = inquiries.Count;
+            TotalPages = (int)Math.Ceiling(TotalEntries / (double)PageSize);
+            FilterInquiries();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading data: {ex.Message}");
+        }
+    }
+    private void FilterInquiries()
+    {
+        var filteredInquiries = string.IsNullOrEmpty(SearchQuery)
+            ? inquiries
+            : inquiries.Where(i => i.FirstName.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase) ||
+                                   i.LastName.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase) ||
+                                   i.EmailId.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase)).ToList();
+
+        TotalEntries = filteredInquiries.Count;
+        TotalPages = (int)Math.Ceiling(TotalEntries / (double)PageSize);
+        paginatedInquiries = filteredInquiries.Skip((CurrentPage - 1) * PageSize).Take(PageSize).ToList();
+    }
+
+    private void SearchInquiries(ChangeEventArgs e)
+    {
+        SearchQuery = e.Value.ToString();
+        FilterInquiries();
+    }
+    private void OpenAddInquiryModal()
+    {
+        inquiry = new Inquiry();
+        isEditing = false;
+        ShowModal("addEditInquiryModal");
+    }
+    private void PreviousPage()
+    {
+        if (HasPreviousPage)
+        {
+            CurrentPage--;
+            FilterInquiries();
+        }
+    }
+
+    private void NextPage()
+    {
+        if (HasNextPage)
+        {
+            CurrentPage++;
+            FilterInquiries();
+        }
+    }
+    private async Task OpenEditInquiryModal(int inquiryNo)
+    {
+        isEditing = true;
+        inquiry = await InquiryService.GetInquiryByIdAsync(inquiryNo);
+        ShowModal("addEditInquiryModal");
+    }
+
+    private async Task OpenDeleteConfirmationModal(int inquiryNo)
+    {
+        inquiryToDeleteId = inquiryNo;
+        ShowModal("deleteConfirmationModal");
+    }
+
+    private async Task CloseAddEditInquiryModal()
+    {
+        await HideModal("addEditInquiryModal");
+    }
+
+    private async Task CloseDeleteConfirmationModal()
+    {
+        await HideModal("deleteConfirmationModal");
+    }
+
+    private async Task ConfirmDeleteInquiry()
+    {
+        await InquiryService.DeleteInquiryAsync(inquiryToDeleteId);
+        await JSRuntime.InvokeVoidAsync("toastr.success", "Inquiry deleted successfully.");
+
+        await LoadInquiries();
+        await CloseDeleteConfirmationModal();
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        if (isEditing)
+        {
+            await InquiryService.UpdateInquiryAsync(inquiry);
+            await JSRuntime.InvokeVoidAsync("toastr.success", "Inquiry updated successfully.");
+
+        }
+        else
+        {
+            await InquiryService.AddInquiryAsync(inquiry);
+            await JSRuntime.InvokeVoidAsync("toastr.success", "Inquiry added successfully.");
+
+        }
+        await LoadInquiries();
+        await CloseAddEditInquiryModal();
+    }
+
+    private async Task ShowModal(string modalId)
+    {
+        await JSRuntime.InvokeVoidAsync("showModal", modalId);
+    }
+
+    private async Task HideModal(string modalId)
+    {
+        await JSRuntime.InvokeVoidAsync("hideModal", modalId);
+    }
+}

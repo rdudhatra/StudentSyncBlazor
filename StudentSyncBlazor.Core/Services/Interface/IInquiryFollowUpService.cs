@@ -11,5 +11,8 @@ namespace StudentSyncBlazor.Core.Services.Interface
         Task AddInquiryFollowUpAsync(InquiryFollowUp inquiryFollowUp);
         Task UpdateInquiryFollowUpAsync(InquiryFollowUp inquiryFollowUp);
         Task DeleteInquiryFollowUpAsync(int id);
+
+        Task<int> GetTotalInquiryFollowUpAsync();
+
     }
 }

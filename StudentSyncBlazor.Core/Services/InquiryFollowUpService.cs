@@ -15,6 +15,10 @@ namespace StudentSync.Core.Services
         {
             _context = context;
         }
+        public async Task<int> GetTotalInquiryFollowUpAsync()
+        {
+            return await _context.InquiryFollowUps.CountAsync();
+        }
 
         public async Task<IList<InquiryFollowUp>> GetAllInquiryFollowUpsAsync()
         {

@@ -9,20 +9,24 @@ public partial class Inquiry
     [Key]
     public int InquiryNo { get; set; }
 
+    [Required(ErrorMessage = "InquiryDate is required.")]
     public DateTime? InquiryDate { get; set; }
 
+    [Required(ErrorMessage = "Title is required.")]
     public string? Title { get; set; }
 
-    [Required]
+    [Required(ErrorMessage = "FirstName is required.")]
     public string FirstName { get; set; }
 
     public string? MiddleName { get; set; }
 
-    [Required]
+    [Required(ErrorMessage = "LastName is required.")]
     public string LastName { get; set; }
 
+    [Required(ErrorMessage = "ContactNo is required.")]
     public string? ContactNo { get; set; }
 
+    [Required(ErrorMessage = "EmailId is required.")]
     public string? EmailId { get; set; }
 
     public DateTime? Dob { get; set; }
@@ -50,6 +54,7 @@ public partial class Inquiry
 
     public string? EnquiryType { get; set; }
 
+    [Required(ErrorMessage = "Status is required.")]
     public string Status { get; set; } = null!;
 
     public bool? IsActive { get; set; }

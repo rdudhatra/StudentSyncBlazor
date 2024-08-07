@@ -18,33 +18,41 @@ namespace StudentSync.Core.Services
         {
             _context = context;
         }
-
-        public async Task<IEnumerable<StudentInstallment>> GetAllStudentInstallmentsAsync()
-        {
-            return await _context.StudentInstallments.ToListAsync();
-        }
-        //public async Task<IEnumerable<StudentInstallmentResponseModel>> GetAllStudentInstallmentsAsync()
+     
+        //public async Task<IEnumerable<StudentInstallment>> GetAllStudentInstallmentsAsync()
         //{
-        //    var studentInstallment = await _context.StudentInstallments
-        //        .Select(studentInstallment => new StudentInstallmentResponseModel
-        //        {
-
-        //            Id = studentInstallment.Id,
-        //            ReceiptNo = studentInstallment.ReceiptNo,
-        //            ReceiptDate = studentInstallment.ReceiptDate,
-        //            Amount = studentInstallment.Amount,
-        //            EnrollmentNo = studentInstallment.EnrollmentNo,
-        //            TransactionMode = studentInstallment.TransactionMode,
-        //            BankName = studentInstallment.BankName,
-        //            Ifsccode = studentInstallment.Ifsccode,
-        //            BranchName  = studentInstallment.BranchName,
-        //            ChequeTranNo = studentInstallment.ChequeTranNo,
-        //            Remarks = studentInstallment.Remarks,
-        //        } )
-        //        .ToListAsync();
-        //    return studentInstallment;
+        //    return await _context.StudentInstallments.ToListAsync();
         //}
+        public async Task<IEnumerable<StudentInstallmentResponseModel>> GetAllStudentInstallmentsAsync()
+        {
+            var installments = await (from installment in _context.StudentInstallments
+                                      join enrollments in _context.Enrollments on installment.EnrollmentNo equals enrollments.EnrollmentNo into courseJoin
+                                      from enrollments in courseJoin.DefaultIfEmpty()
+                                      select new StudentInstallmentResponseModel
+                                      {
+                                          Id = installment.Id,
+                                          ReceiptNo = installment.ReceiptNo,
+                                          ReceiptDate = installment.ReceiptDate,
+                                          Amount = installment.Amount,
+                                          EnrollmentNo = installment.EnrollmentNo,
+                                          TransactionMode = installment.TransactionMode,
+                                          BankName = installment.BankName,
+                                          Ifsccode = installment.Ifsccode,
+                                          BranchName = installment.BranchName,
+                                          ChequeTranNo = installment.ChequeTranNo,
+                                          Remarks = installment.Remarks,
+                                          CreatedBy = installment.CreatedBy,
+                                          CreatedDate = installment.CreatedDate,
+                                          UpdatedBy = installment.UpdatedBy,
+                                          UpdatedDate = installment.UpdatedDate,
+                                      }).ToListAsync();
 
+            return installments;
+        }
+        public async Task<int> GetTotalStudentInstallMentAsync()
+        {
+            return await _context.StudentInstallments.CountAsync();
+        }
         public async Task<StudentInstallment> GetStudentInstallmentByIdAsync(int id)
         {
 

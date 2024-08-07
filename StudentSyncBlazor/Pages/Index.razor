@@ -1,6 +1,326 @@
 ﻿@page "/"
-@* @attribute [Authorize]
- *@
-<PageTitle>Index</PageTitle>
+@using StudentSyncBlazor.Core.Services.Interface
+@using StudentSyncBlazor.Core.Services.Interfaces
+@inject IEmployeeService EmployeeService
+@inject IStudentInstallmentService StudentInstallmentService
+@inject IStudentAttendanceService StudentAttendanceService
+@inject IStudentAssessmentService StudentAssessmentService
+@inject IInquiryFollowUpService InquiryFollowUpService
+@inject IInquiryService InquiryService
+@inject IEnrollmentService EnrollmentService
+@inject ICourseSyllabusService CourseSyllabusService
+@inject ICourseExamServices CourseExamService
+@inject ICourseServices CourseServices
+@inject ICourseFeeService CourseFeeService
+@inject IBatchService BatchService
 
-<h1 style="text-align: center;">Welcome To Student Sync</h1>
+<Breadcrumb Title="DashBoard" BreadcrumbPageTitle="Menu"></Breadcrumb>
+
+<div class="row">
+    <!-- TotalBatches -->
+    <div class="col-md-6 col-xl-3">
+        <div class="card">
+            <div class="card-body">
+                <div class="float-end mt-2">
+                    <p class="text-muted mb-0">Batches</p>
+                    <div id="batches-chart"></div>
+                </div>
+                <div>
+                    <h4 class="mb-1 mt-1"><span class="counterup">@TotalBatches</span></h4>
+                </div>
+                <p class="text-muted mt-3 mb-0">
+                    <span class="text-danger me-1"><i class="mdi mdi-arrow-down-bold me-1"></i>6.24%</span> since last week
+                </p>
+            </div>
+        </div>
+    </div> <!-- end col-->
+    <!-- TotalEmployees -->
+    <div class="col-md-6 col-xl-3">
+        <div class="card">
+            <div class="card-body">
+                <div class="float-end mt-2">
+                    <p class="text-muted mb-0">Employee</p>
+                    <div id="employees-chart"></div>
+                </div>
+                <div>
+                    <h4 class="mb-1 mt-1"><span >@TotalEmployees</span></h4>
+                </div>
+                <p class="text-muted mt-3 mb-0">
+                    <span class="text-success me-1"><i class="mdi mdi-arrow-up-bold me-1"></i>2.65%</span> since last week
+                </p>
+            </div>
+        </div>
+    </div> <!-- end col-->
+    <!-- Total Enrollments -->
+    <div class="col-md-6 col-xl-3">
+        <div class="card">
+            <div class="card-body">
+                <div class="float-end mt-2">
+                    <p class="text-muted mb-0">Enrollments</p>
+                    <div id="enrollments-chart"></div>
+                </div>
+                <div>
+                    <h4 class="mb-1 mt-1"><span>@TotalEnrollments</span></h4>
+                </div>
+                <p class="text-muted mt-3 mb-0">
+                    <span class="text-danger me-1"><i class="mdi mdi-arrow-down-bold me-1"></i>6.24%</span> since last week
+                </p>
+            </div>
+        </div>
+    </div> <!-- end col-->
+
+    <!-- Total Courses -->
+    <div class="col-md-6 col-xl-3">
+        <div class="card">
+            <div class="card-body">
+                <div class="float-end mt-2">
+                    <p class="text-muted mb-0">Courses</p>
+                    <div id="courses-chart"></div>
+                </div>
+                <div>
+                    <h4 class="mb-1 mt-1"><span>@TotalCourses</span></h4>
+                </div>
+                <p class="text-muted mt-3 mb-0">
+                    <span class="text-success me-1"><i class="mdi mdi-arrow-up-bold me-1"></i>2.65%</span> since last week
+                </p>
+            </div>
+        </div>
+    </div> <!-- end col-->
+    <!-- Total Course Exams -->
+    <div class="col-md-6 col-xl-3">
+        <div class="card">
+            <div class="card-body">
+                <div class="float-end mt-2">
+                    <p class="text-muted mb-0">Course Exams</p>
+                    <div id="course-exams-chart"></div>
+                </div>
+                <div>
+                    <h4 class="mb-1 mt-1"><span>@TotalCourseExams</span></h4>
+                </div>
+                <p class="text-muted mt-3 mb-0">
+                    <span class="text-danger me-1"><i class="mdi mdi-arrow-down-bold me-1"></i>6.24%</span> since last week
+                </p>
+            </div>
+        </div>
+    </div> <!-- end col-->
+    <!-- Total Course Fees -->
+    <div class="col-md-6 col-xl-3">
+        <div class="card">
+            <div class="card-body">
+                <div class="float-end mt-2">
+                    <p class="text-muted mb-0">Course Fees</p>
+                    <div id="course-fees-chart"></div>
+                </div>
+                <div>
+                    <h4 class="mb-1 mt-1"><span>@TotalCourseFees</span></h4>
+                </div>
+                <p class="text-muted mt-3 mb-0">
+                    <span class="text-success me-1"><i class="mdi mdi-arrow-down-bold me-1"></i>6.24%</span> since last week
+                </p>
+            </div>
+        </div>
+    </div> <!-- end col-->
+    <!-- TotalCourseSyllbus -->
+
+    <div class="col-md-6 col-xl-3">
+        <div class="card">
+            <div class="card-body">
+                <div class="float-end mt-2">
+                    <p class="text-muted mb-0">CourseSyllbus</p>
+                    <div id="inquiries-chart"></div>
+                </div>
+                <div>
+                    <h4 class="mb-1 mt-1"><span>@TotalCourseSyllbus</span></h4>
+                </div>
+                <p class="text-muted mt-3 mb-0">
+                    <span class="text-danger me-1"><i class="mdi mdi-arrow-down-bold me-1"></i>6.24%</span> since last week
+                </p>
+            </div>
+        </div>
+    </div> <!-- end col-->
+     <!-- Total Inquiries -->
+    <div class="col-md-6 col-xl-3">
+        <div class="card">
+            <div class="card-body">
+                <div class="float-end mt-2">
+                    <p class="text-muted mb-0">Inquiries</p>
+                    <div id="inquiries-chart"></div>
+                </div>
+                <div>
+                    <h4 class="mb-1 mt-1"><span >@TotalInquiries</span></h4>
+                </div>
+                <p class="text-muted mt-3 mb-0">
+                    <span class="text-success me-1"><i class="mdi mdi-arrow-down-bold me-1"></i>6.24%</span>since last week
+                </p>
+            </div>
+        </div>
+    </div> <!-- end col-->
+    <!-- TotalStudentInquiryFollowUp  -->
+
+    <div class="col-md-6 col-xl-3">
+        <div class="card">
+            <div class="card-body">
+                <div class="float-end mt-2">
+                    <p class="text-muted mb-0">StudentInquiryFollowUp</p>
+                    <div id="inquiries-chart"></div>
+                </div>
+                <div>
+                    <h4 class="mb-1 mt-1"><span>@TotalStudentInquiryFollowUp</span></h4>
+                </div>
+                <p class="text-muted mt-3 mb-0">
+                    <span class="text-danger me-1"><i class="mdi mdi-arrow-down-bold me-1"></i>6.24%</span>since last week
+                </p>
+            </div>
+        </div>
+    </div> <!-- end col-->
+    <!-- TotalStudentAssessment  -->
+
+    <div class="col-md-6 col-xl-3">
+        <div class="card">
+            <div class="card-body">
+                <div class="float-end mt-2">
+                    <p class="text-muted mb-0">StudentAssessment</p>
+                    <div id="inquiries-chart"></div>
+                </div>
+                <div>
+                    <h4 class="mb-1 mt-1"><span >@TotalStudentAssessment</span></h4>
+                </div>
+                <p class="text-muted mt-3 mb-0">
+                    <span class="text-success me-1"><i class="mdi mdi-arrow-down-bold me-1"></i>6.24%</span>since last week
+                </p>
+            </div>
+        </div>
+    </div> <!-- end col-->
+    <!-- TotalStudentAttendance  -->
+
+    <div class="col-md-6 col-xl-3">
+        <div class="card">
+            <div class="card-body">
+                <div class="float-end mt-2">
+                    <p class="text-muted mb-0">StudentAttendance</p>
+                    <div id="inquiries-chart"></div>
+                </div>
+                <div>
+                    <h4 class="mb-1 mt-1"><span >@TotalStudentAttendance</span></h4>
+                </div>
+                <p class="text-muted mt-3 mb-0">
+                    <span class="text-danger me-1"><i class="mdi mdi-arrow-down-bold me-1"></i>6.24%</span>since last week
+                </p>
+            </div>
+        </div>
+    </div> <!-- end col-->
+
+    <!-- TotalStudentInstallment  -->
+
+    <div class="col-md-6 col-xl-3">
+        <div class="card">
+            <div class="card-body">
+                <div class="float-end mt-2">
+                    <p class="text-muted mb-0">StudentInstallment</p>
+                    <div id="inquiries-chart"></div>
+                </div>
+                <div>
+                    <h4 class="mb-1 mt-1"><span >@TotalStudentInstallment</span></h4>
+                </div>
+                <p class="text-muted mt-3 mb-0">
+                    <span class="text-success me-1"><i class="mdi mdi-arrow-down-bold me-1"></i>6.24%</span>since last week
+                </p>
+            </div>
+        </div>
+    </div> <!-- end col-->
+
+</div> <!-- end row -->
+
+@* <div class="row">
+    <div class="col-xl-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="float-end">
+                    <div class="dropdown">
+                        <a class="dropdown-toggle text-reset" href="#" id="dropdownMenuButton5"
+                           data-bs-toggle="dropdown" aria-haspopup="true"
+                           aria-expanded="false">
+                            <span class="fw-semibold">Sort By:</span> <span class="text-muted">Yearly<i class="mdi mdi-chevron-down ms-1"></i></span>
+                        </a>
+                        <div class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenuButton5">
+                            <a class="dropdown-item" href="#">Monthly</a>
+                            <a class="dropdown-item" href="#">Yearly</a>
+                            <a class="dropdown-item" href="#">Weekly</a>
+                        </div>
+                    </div>
+                </div>
+                <h4 class="card-title mb-4">Student Sync Analytics</h4>
+
+                <div class="mt-1">
+                    <ul class="list-inline main-chart mb-0">
+                        <li class="list-inline-item chart-border-left me-0 border-0">
+                            <h3 class="text-primary"><span >@TotalEmployees</span><span class="text-muted d-inline-block font-size-15 ms-3">Employees</span></h3>
+                        </li>
+                        <li class="list-inline-item chart-border-left me-0">
+                            <h3><span >@TotalBatches</span><span class="text-muted d-inline-block font-size-15 ms-3">Batches</span></h3>
+                        </li>
+                        <li class="list-inline-item chart-border-left me-0">
+                            <h3><span >@TotalCourses</span><span class="text-muted d-inline-block font-size-15 ms-3">Courses</span></h3>
+                        </li>
+                        <li class="list-inline-item chart-border-left me-0">
+                            <h3><span >@TotalInquiries</span><span class="text-muted d-inline-block font-size-15 ms-3">Inquiries</span></h3>
+                        </li>
+                        <li class="list-inline-item chart-border-left me-0">
+                            <h3><span >@TotalEnrollments</span><span class="text-muted d-inline-block font-size-15 ms-3">Enrollments</span></h3>
+                        </li>
+                        <li class="list-inline-item chart-border-left me-0">
+                            <h3><span >@TotalCourseFees</span><span class="text-muted d-inline-block font-size-15 ms-3">Course Fees</span></h3>
+                        </li>
+                        <li class="list-inline-item chart-border-left me-0">
+                            <h3><span>@TotalStudentAssessment</span><span class="text-muted d-inline-block font-size-15 ms-3">Student Assessments</span></h3>
+                        </li>
+                        <li class="list-inline-item chart-border-left me-0">
+                            <h3><span >@TotalCourseExams</span><span class="text-muted d-inline-block font-size-15 ms-3">Course Exams</span></h3>
+                        </li>
+                        <li class="list-inline-item chart-border-left me-0">
+                            <h3><span >@TotalStudentAttendance</span><span class="text-muted d-inline-block font-size-15 ms-3">Student Attendance</span></h3>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="mt-3">
+                    <div id="sales-analytics-chart" class="apex-charts" dir="ltr"></div>
+                </div>
+            </div>
+        </div><!-- end card -->
+    </div><!-- end col -->
+</div> *@
+
+@code {
+    private int TotalEmployees { get; set; }
+    private int TotalBatches { get; set; }
+    private int TotalCourseExams { get; set; }
+    private int TotalCourseFees { get; set; }
+    private int TotalCourses { get; set; }
+    private int TotalEnrollments { get; set; }
+    private int TotalInquiries { get; set; }
+    private int TotalStudentAssessment { get; set; }
+    private int TotalStudentAttendance { get; set; }
+    private int TotalStudentInstallment { get; set; }
+    private int TotalStudentInquiryFollowUp { get; set; }
+    private int TotalCourseSyllbus { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        TotalEmployees = await EmployeeService.GetTotalEmployeesAsync();
+        TotalBatches = await BatchService.GetTotalBatchesAsync();
+        TotalCourseExams = await CourseExamService.GetTotalCourseExamsAsync();
+        TotalCourseFees = await CourseFeeService.GetTotalCourseFeesAsync();
+        TotalCourses = await CourseServices.GetTotalCoursesAsync();
+        TotalEnrollments = await EnrollmentService.GetTotalEnrollmentsAsync();
+        TotalInquiries = await InquiryService.GetTotalInquiriesAsync();
+        TotalStudentAssessment = await StudentAssessmentService.GetTotalStudentAssessmentsAsync();
+        TotalStudentAttendance = await StudentAttendanceService.GetTotalStudentAttendanceAsync();
+        TotalStudentInstallment = await StudentInstallmentService.GetTotalStudentInstallMentAsync();
+        TotalStudentInquiryFollowUp = await InquiryFollowUpService.GetTotalInquiryFollowUpAsync();
+        TotalCourseSyllbus = await CourseSyllabusService.GetTotalCourseSyllabusAsync();
+        // Fetch other data as needed
+    }
+
+}
+

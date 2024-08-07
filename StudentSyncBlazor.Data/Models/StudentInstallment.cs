@@ -10,14 +10,19 @@ public partial class StudentInstallment
 
     public int Id { get; set; }
 
+    [Required(ErrorMessage = "ReceiptNo is required.")]
     public string? ReceiptNo { get; set; }
 
+    [Required(ErrorMessage = "ReceiptDate is required.")]
     public DateTime? ReceiptDate { get; set; }
 
+    [Required(ErrorMessage = "Amount is required.")]
     public decimal? Amount { get; set; }
-
+    
+    [Required(ErrorMessage = "EnrollmentNo is required.")]
     public string? EnrollmentNo { get; set; }
 
+    [Required(ErrorMessage = "TransactionMode is required.")]
     public string? TransactionMode { get; set; }
 
     public string? BankName { get; set; }
@@ -28,6 +33,7 @@ public partial class StudentInstallment
 
     public string? ChequeTranNo { get; set; }
 
+    [Required(ErrorMessage = "Remarks is required.")]
     public string? Remarks { get; set; }
 
     public string? CreatedBy { get; set; }

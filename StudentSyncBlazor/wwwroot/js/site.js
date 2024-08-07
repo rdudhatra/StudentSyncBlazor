@@ -1,4 +1,7 @@
-﻿function showModal(modalId) {
+﻿
+
+
+function showModal(modalId) {
     var modal = new bootstrap.Modal(document.getElementById(modalId));
     modal.show();
 }
@@ -8,6 +11,15 @@ function hideModal(modalId) {
     if (modal) {
         modal.hide();
     }
+
+}
+
+function ShowModal(modalId) {
+    $('#' + modalId).modal('show');
+}
+
+function HideModal(modalId) {
+    $('#' + modalId).modal('hide');
 }
 function showSuccess(message) {
     toastr.success(message, "Success", { positionClass: "toast-bottom-center" });

@@ -7,7 +7,7 @@
 @inject IJSRuntime JSRuntime
 @inject IStudentAssessmentService StudentAssessmentService
 
-<Breadcrumb Title="Student Assessment" BreadcrumbPageTitle="Courses"></Breadcrumb>
+<Breadcrumb Title="Student Assessment" BreadcrumbPageTitle="Students"></Breadcrumb>
 
 <div class="row">
     <div class="col-12">
@@ -78,26 +78,35 @@
             <div class="modal-body">
                 <EditForm Model="assessment" OnValidSubmit="HandleValidSubmit">
                     <DataAnnotationsValidator />
-                    <ValidationSummary />
                     <div class="form-group">
                         <label for="AssessmentDate">Assessment Date</label>
                         <InputDate id="AssessmentDate" class="form-control" @bind-Value="assessment.AssessmentDate" />
+                        <ValidationMessage For="@(() => assessment.AssessmentDate)" />
+
                     </div>
                     <div class="form-group">
                         <label for="EnrollmentNo">Enrollment No</label>
                         <InputText id="EnrollmentNo" class="form-control" @bind-Value="assessment.EnrollmentNo" />
+                        <ValidationMessage For="@(() => assessment.EnrollmentNo)" />
+
                     </div>
                     <div class="form-group">
                         <label for="CourseExamId">Course Exam ID</label>
                         <InputNumber id="CourseExamId" class="form-control" @bind-Value="assessment.CourseExamId" />
+                        <ValidationMessage For="@(() => assessment.CourseExamId)" />
+
                     </div>
                     <div class="form-group">
                         <label for="ObtainedMarks">Obtained Marks</label>
                         <InputNumber id="ObtainedMarks" class="form-control" @bind-Value="assessment.ObtainedMarks" />
+                        <ValidationMessage For="@(() => assessment.ObtainedMarks)" />
+
                     </div>
                     <div class="form-group">
                         <label for="Remarks">Remarks</label>
                         <InputTextArea id="Remarks" class="form-control" @bind-Value="assessment.Remarks" />
+                        <ValidationMessage For="@(() => assessment.Remarks)" />
+
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" @onclick="CloseAddEditAssessmentModal">Cancel</button>
@@ -160,7 +169,7 @@
             assessments = (await StudentAssessmentService.GetAllStudentAssessments()).ToList();
             TotalEntries = assessments.Count;
             TotalPages = (int)Math.Ceiling(TotalEntries / (double)PageSize);
-            // FilterAssessments();
+             FilterAssessments();
         }
         catch (Exception ex)
         {
@@ -168,16 +177,16 @@
         }
     }
 
-    // private void FilterAssessments()
-    // {
-    //     var filteredAssessments = string.IsNullOrEmpty(SearchQuery)
-    //         ? assessments
-    //         : assessments.Where(a => a.EnrollmentNo.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase)).ToList();
+    private void FilterAssessments()
+    {
+        var filteredAssessments = string.IsNullOrEmpty(SearchQuery)
+            ? assessments
+            : assessments.Where(a => a.EnrollmentNo.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase)).ToList();
 
-    //     TotalEntries = filteredAssessments.Count;
-    //     TotalPages = (int)Math.Ceiling(TotalEntries / (double)PageSize);
-    //     paginatedAssessments = filteredAssessments.Skip((CurrentPage - 1) * PageSize).Take(PageSize).ToList();
-    // }
+        TotalEntries = filteredAssessments.Count;
+        TotalPages = (int)Math.Ceiling(TotalEntries / (double)PageSize);
+        paginatedAssessments = filteredAssessments.Skip((CurrentPage - 1) * PageSize).Take(PageSize).ToList();
+    }
 
     private void SearchAssessments(ChangeEventArgs e)
     {
@@ -252,8 +261,8 @@
     {
         if (CurrentPage > 1)
         {
-            CurrentPage--;
-            // FilterAssessments();
+            CurrentPage--; 
+             FilterAssessments();
         }
     }
 
@@ -262,7 +271,7 @@
         if (CurrentPage < TotalPages)
         {
             CurrentPage++;
-            // FilterAssessments();
+             FilterAssessments();
         }
     }
 }

@@ -3,17 +3,21 @@
 @using StudentSyncBlazor.Core.Services.Interfaces
 @using Microsoft.AspNetCore.Components
 @using Microsoft.AspNetCore.Components.Forms
+@using StudentSyncBlazor.Data.ResponseModel
 @inject IJSRuntime JSRuntime
 @inject IStudentInstallmentService StudentInstallmentService
 
-<h3>Student Installment</h3>
+<Breadcrumb Title="Student Installments" BreadcrumbPageTitle="Students"></Breadcrumb>
 
 <div class="row">
     <div class="col-12">
         <div class="card">
             <div class="card-body">
-                <button type="button" class="btn btn-primary mb-3" @onclick="OpenAddStudentInstallmentModal">+</button>
-                <table id="StudentInstallmentTable" class="table table-bordered dt-responsive nowrap" style="width: 100%;">
+                <!-- Search Box and Add Button -->
+                <div class="mb-3 d-flex justify-content-between align-items-center">
+                    <button type="button" class="btn btn-primary mb-3" @onclick="OpenAddStudentInstallmentModal">+</button>
+                    <input type="text" class="form-control mb-3" style="width: 13%;" @bind="SearchQuery" @oninput="SearchInstallments" placeholder="Search..." />
+                </div>                <table id="StudentInstallmentTable" class="table table-bordered dt-responsive nowrap" style="width: 100%;">
                     <thead>
                         <tr>
                             <th>ID</th>
@@ -22,16 +26,12 @@
                             <th>Amount</th>
                             <th>Enrollment No</th>
                             <th>Transaction Mode</th>
-                            <th>Bank Name</th>
-                            <th>IFSC Code</th>
-                            <th>Branch Name</th>
-                            <th>Cheque/Tran No</th>
                             <th>Remarks</th>
                             <th>Action</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach (var installment in studentInstallments)
+                        @foreach (var installment in paginatedInstallments)
                         {
                             <tr>
                                 <td>@installment.Id</td>
@@ -40,10 +40,6 @@
                                 <td>@installment.Amount</td>
                                 <td>@installment.EnrollmentNo</td>
                                 <td>@installment.TransactionMode</td>
-                                <td>@installment.BankName</td>
-                                <td>@installment.Ifsccode</td>
-                                <td>@installment.BranchName</td>
-                                <td>@installment.ChequeTranNo</td>
                                 <td>@installment.Remarks</td>
                                 <td>
                                     <button class="btn btn-warning" @onclick="() => OpenEditStudentInstallmentModal(installment.Id)">Edit</button>
@@ -53,12 +49,25 @@
                         }
                     </tbody>
                 </table>
+                <!-- Pagination Controls -->
+                <div class="pagination-container d-flex justify-content-between align-items-center mb-3">
+                    <!-- Pagination Message -->
+                    <div class="pagination-message">
+                        Showing @StartEntry to @EndEntry of @TotalEntries entries
+                    </div>
+
+                    <div class="pagination-controls d-flex align-items-center">
+                        <button class="btn btn-secondary me-2" @onclick="PreviousPage" disabled="@(!HasPreviousPage)">Previous</button>
+                        <button class="btn btn-primary me-2" disabled>@CurrentPage</button>
+                        <button class="btn btn-secondary me-2" @onclick="NextPage" disabled="@(!HasNextPage)">Next</button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Add/Edit Student Installment Modal -->
+<!-- Add/Edit StudentInstallment Modal -->
 <div class="modal fade" id="addEditStudentInstallmentModal" tabindex="-1" aria-labelledby="addEditStudentInstallmentModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -67,51 +76,48 @@
                 <button type="button" class="btn-close" aria-label="Close" @onclick="CloseAddEditStudentInstallmentModal"></button>
             </div>
             <div class="modal-body">
-                <EditForm Model="@studentInstallment" OnValidSubmit="HandleValidSubmit">
+                <EditForm Model="installment" OnValidSubmit="HandleValidSubmit">
                     <DataAnnotationsValidator />
-                    <ValidationSummary />
+                    <div class="form-group">
+                        <label for="ReceiptNo">Receipt No</label>
+                        <InputText id="ReceiptNo" class="form-control" @bind-Value="installment.ReceiptNo" />
+                        <ValidationMessage For="@(() => installment.ReceiptNo)" />
 
-                    <div class="mb-3">
-                        <label for="receiptNo" class="form-label">Receipt No</label>
-                        <InputText id="receiptNo" class="form-control" @bind-Value="studentInstallment.ReceiptNo" />
                     </div>
-                    <div class="mb-3">
-                        <label for="receiptDate" class="form-label">Receipt Date</label>
-                        <InputDate id="receiptDate" class="form-control" @bind-Value="studentInstallment.ReceiptDate" />
+                    <div class="form-group">
+                        <label for="ReceiptDate">Receipt Date</label>
+                        <InputDate id="ReceiptDate" class="form-control" @bind-Value="installment.ReceiptDate" />
+                        <ValidationMessage For="@(() => installment.ReceiptDate)" />
+
                     </div>
-                    <div class="mb-3">
-                        <label for="amount" class="form-label">Amount</label>
-                        <InputNumber id="amount" class="form-control" @bind-Value="studentInstallment.Amount" />
+                    <div class="form-group">
+                        <label for="Amount">Amount</label>
+                        <InputNumber id="Amount" class="form-control" @bind-Value="installment.Amount" />
+                        <ValidationMessage For="@(() => installment.Amount)" />
+
                     </div>
-                    <div class="mb-3">
-                        <label for="enrollmentNo" class="form-label">Enrollment No</label>
-                        <InputText id="enrollmentNo" class="form-control" @bind-Value="studentInstallment.EnrollmentNo" />
+                    <div class="form-group">
+                        <label for="EnrollmentNo">Enrollment No</label>
+                        <InputText id="EnrollmentNo" class="form-control" @bind-Value="installment.EnrollmentNo" />
+                        <ValidationMessage For="@(() => installment.EnrollmentNo)" />
+
                     </div>
-                    <div class="mb-3">
-                        <label for="transactionMode" class="form-label">Transaction Mode</label>
-                        <InputText id="transactionMode" class="form-control" @bind-Value="studentInstallment.TransactionMode" />
+                    <div class="form-group">
+                        <label for="TransactionMode">Transaction Mode</label>
+                        <InputText id="TransactionMode" class="form-control" @bind-Value="installment.TransactionMode" />
+                        <ValidationMessage For="@(() => installment.TransactionMode)" />
+
                     </div>
-                    <div class="mb-3">
-                        <label for="bankName" class="form-label">Bank Name</label>
-                        <InputText id="bankName" class="form-control" @bind-Value="studentInstallment.BankName" />
+                    <div class="form-group">
+                        <label for="Remarks">Remarks</label>
+                        <InputTextArea id="Remarks" class="form-control" @bind-Value="installment.Remarks" />
+                        <ValidationMessage For="@(() => installment.Remarks)" />
+
                     </div>
-                    <div class="mb-3">
-                        <label for="ifsccode" class="form-label">IFSC Code</label>
-                        <InputText id="ifsccode" class="form-control" @bind-Value="studentInstallment.Ifsccode" />
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CloseAddEditStudentInstallmentModal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save</button>
                     </div>
-                    <div class="mb-3">
-                        <label for="branchName" class="form-label">Branch Name</label>
-                        <InputText id="branchName" class="form-control" @bind-Value="studentInstallment.BranchName" />
-                    </div>
-                    <div class="mb-3">
-                        <label for="chequeTranNo" class="form-label">Cheque/Tran No</label>
-                        <InputText id="chequeTranNo" class="form-control" @bind-Value="studentInstallment.ChequeTranNo" />
-                    </div>
-                    <div class="mb-3">
-                        <label for="remarks" class="form-label">Remarks</label>
-                        <InputText id="remarks" class="form-control" @bind-Value="studentInstallment.Remarks" />
-                    </div>
-                    <button type="submit" class="btn btn-primary">Save</button>
                 </EditForm>
             </div>
         </div>
@@ -123,22 +129,38 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="deleteConfirmationModalLabel">Confirm Delete</h5>
+                <h5 class="modal-title" id="deleteConfirmationModalLabel">Delete Confirmation</h5>
                 <button type="button" class="btn-close" aria-label="Close" @onclick="CloseDeleteConfirmationModal"></button>
             </div>
             <div class="modal-body">
-                <p>Are you sure you want to delete this Student Installment?</p>
-                <button class="btn btn-danger" @onclick="DeleteStudentInstallment">Delete</button>
-                <button class="btn btn-secondary" @onclick="CloseDeleteConfirmationModal">Cancel</button>
+                Are you sure you want to delete this student installment?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" @onclick="CloseDeleteConfirmationModal">Cancel</button>
+                <button type="button" class="btn btn-danger" @onclick="ConfirmDeleteStudentInstallment">Delete</button>
             </div>
         </div>
     </div>
 </div>
 
 @code {
-    private List<StudentInstallment> studentInstallments;
-    private StudentInstallment studentInstallment;
-    private string Title;
+    private List<StudentInstallmentResponseModel> installments = new List<StudentInstallmentResponseModel>();
+    private List<StudentInstallmentResponseModel> paginatedInstallments = new List<StudentInstallmentResponseModel>();
+    private StudentInstallment installment = new StudentInstallment();
+    private bool isEditing = false;
+    private int installmentToDeleteId;
+    private string SearchQuery { get; set; } = string.Empty;
+    private int CurrentPage { get; set; } = 1;
+    private int PageSize { get; set; } = 10;
+    private int TotalPages { get; set; }
+    private bool HasPreviousPage => CurrentPage > 1;
+    private bool HasNextPage => CurrentPage < TotalPages;
+
+    private int StartEntry => (CurrentPage - 1) * PageSize + 1;
+    private int EndEntry => Math.Min(CurrentPage * PageSize, TotalEntries);
+    private int TotalEntries { get; set; }
+
+    private string Title => isEditing ? "Edit Student Installment" : "Add Student Installment";
 
     protected override async Task OnInitializedAsync()
     {
@@ -147,60 +169,120 @@
 
     private async Task LoadStudentInstallments()
     {
-        studentInstallments = (await StudentInstallmentService.GetAllStudentInstallmentsAsync()).ToList();
+        try
+        {
+            installments = (await StudentInstallmentService.GetAllStudentInstallmentsAsync()).ToList();
+            TotalEntries = installments.Count;
+            TotalPages = (int)Math.Ceiling(TotalEntries / (double)PageSize);
+            FilterInstallments(); // Force UI to update
+        }   
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading data: {ex.Message}");
+        }
+    }
+    private void FilterInstallments()
+    {
+        var filteredInstallments = string.IsNullOrEmpty(SearchQuery)
+            ? installments
+            : installments.Where(i => i.EnrollmentNo.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase)).ToList();
+
+        TotalEntries = filteredInstallments.Count;
+        TotalPages = (int)Math.Ceiling(TotalEntries / (double)PageSize);
+
+        paginatedInstallments = filteredInstallments
+            .Skip((CurrentPage - 1) * PageSize)
+            .Take(PageSize)
+            .ToList();
+
+    }
+    private void SearchInstallments(ChangeEventArgs e)
+    {
+        SearchQuery = e.Value.ToString();
+        CurrentPage = 1;
+        FilterInstallments();
+    }
+    private void PreviousPage()
+    {
+        if (HasPreviousPage)
+        {
+            CurrentPage--;
+            FilterInstallments();
+        }
     }
 
+    private void NextPage()
+    {
+        if (HasNextPage)
+        {
+            CurrentPage++;
+            FilterInstallments();
+        }
+    }
     private void OpenAddStudentInstallmentModal()
     {
-        Title = "Add Student Installment";
-        studentInstallment = new StudentInstallment();
-        JSRuntime.InvokeVoidAsync("showModal", "#addEditStudentInstallmentModal");
+        installment = new StudentInstallment();
+        isEditing = false;
+        ShowModal("addEditStudentInstallmentModal");
     }
 
-    private async Task OpenEditStudentInstallmentModal(int id)
+    private async Task OpenEditStudentInstallmentModal(int installmentId)
     {
-        Title = "Edit Student Installment";
-        studentInstallment = await StudentInstallmentService.GetStudentInstallmentByIdAsync(id);
-        JSRuntime.InvokeVoidAsync("showModal", "#addEditStudentInstallmentModal");
+        isEditing = true;
+        installment = await StudentInstallmentService.GetStudentInstallmentByIdAsync(installmentId);
+        ShowModal("addEditStudentInstallmentModal");
+    }
+
+    private async Task OpenDeleteConfirmationModal(int installmentId)
+    {
+        installmentToDeleteId = installmentId;
+        ShowModal("deleteConfirmationModal");
+    }
+
+    private async Task CloseAddEditStudentInstallmentModal()
+    {
+        await HideModal("addEditStudentInstallmentModal");
+    }
+
+    private async Task CloseDeleteConfirmationModal()
+    {
+        await HideModal("deleteConfirmationModal");
+    }
+
+    private async Task ConfirmDeleteStudentInstallment()
+    {
+        await StudentInstallmentService.DeleteStudentInstallmentAsync(installmentToDeleteId);
+        await JSRuntime.InvokeVoidAsync("toastr.success", "Installment deleted successfully.");
+
+        await LoadStudentInstallments();
+        await CloseDeleteConfirmationModal();
     }
 
     private async Task HandleValidSubmit()
     {
-        if (studentInstallment.Id == 0)
+        if (isEditing)
         {
-            await StudentInstallmentService.CreateStudentInstallmentAsync(studentInstallment);
+            await StudentInstallmentService.UpdateStudentInstallmentAsync(installment);
+            await JSRuntime.InvokeVoidAsync("toastr.success", "Installment updated successfully.");
+
         }
         else
         {
-            await StudentInstallmentService.UpdateStudentInstallmentAsync(studentInstallment);
+            await StudentInstallmentService.CreateStudentInstallmentAsync(installment);
+            await JSRuntime.InvokeVoidAsync("toastr.success", "Installment added successfully.");
+
         }
-
         await LoadStudentInstallments();
-        JSRuntime.InvokeVoidAsync("hideModal", "#addEditStudentInstallmentModal");
-        JSRuntime.InvokeVoidAsync("showToastr", "success", "Student Installment saved successfully.");
+        await CloseAddEditStudentInstallmentModal();
     }
 
-    private void OpenDeleteConfirmationModal(int id)
+    private async Task ShowModal(string modalId)
     {
-        studentInstallment.Id = id;
-        JSRuntime.InvokeVoidAsync("showModal", "#deleteConfirmationModal");
+        await JSRuntime.InvokeVoidAsync("showModal", modalId);
     }
 
-    private async Task DeleteStudentInstallment()
+    private async Task HideModal(string modalId)
     {
-        await StudentInstallmentService.DeleteStudentInstallmentAsync(studentInstallment.Id);
-        await LoadStudentInstallments();
-        JSRuntime.InvokeVoidAsync("hideModal", "#deleteConfirmationModal");
-        JSRuntime.InvokeVoidAsync("showToastr", "success", "Student Installment deleted successfully.");
-    }
-
-    private void CloseAddEditStudentInstallmentModal()
-    {
-        JSRuntime.InvokeVoidAsync("hideModal", "#addEditStudentInstallmentModal");
-    }
-
-    private void CloseDeleteConfirmationModal()
-    {
-        JSRuntime.InvokeVoidAsync("hideModal", "#deleteConfirmationModal");
+        await JSRuntime.InvokeVoidAsync("hideModal", modalId);
     }
 }
