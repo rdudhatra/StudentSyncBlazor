@@ -5,7 +5,8 @@
 @using Microsoft.AspNetCore.Components.Forms
 @using StudentSyncBlazor.Data.ResponseModel
 @inject IJSRuntime JSRuntime
-@inject IInquiryService InquiryService
+@inject HttpClient HttpClient
+
 
 <Breadcrumb Title="Inquiry" BreadcrumbPageTitle="Inquiries"></Breadcrumb>
 
@@ -181,6 +182,239 @@
     {
         try
         {
+            var token = await AuthService.GetTokenAsync(); // Get the token
+            HttpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            var response = await HttpClient.GetAsync("Inquiry/GetAll");
+            if (response.IsSuccessStatusCode)
+            {
+                var allInquiries = await response.Content.ReadFromJsonAsync<List<InquiryResponseModel>>();
+                if (allInquiries == null || !allInquiries.Any())
+                {
+                    inquiries = new List<InquiryResponseModel>();
+                }
+                else
+                {
+                    inquiries = allInquiries;
+                    FilterInquiries();
+                }
+                StateHasChanged(); // Force UI to update
+            }
+            else
+            {
+                Console.WriteLine($"Error loading data: {response.ReasonPhrase}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading data: {ex.Message}");
+        }
+    }
+
+    private void FilterInquiries()
+    {
+        var filteredInquiries = string.IsNullOrEmpty(SearchQuery)
+            ? inquiries
+            : inquiries.Where(i => i.FirstName.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase) ||
+                                   i.LastName.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase) ||
+                                   i.EmailId.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase)).ToList();
+
+        TotalEntries = filteredInquiries.Count;
+        TotalPages = (int)Math.Ceiling(TotalEntries / (double)PageSize);
+        paginatedInquiries = filteredInquiries.Skip((CurrentPage - 1) * PageSize).Take(PageSize).ToList();
+    }
+
+    private void SearchInquiries(ChangeEventArgs e)
+    {
+        SearchQuery = e.Value?.ToString() ?? string.Empty;
+        FilterInquiries();
+    }
+
+    private async Task PreviousPage()
+    {
+        if (HasPreviousPage)
+        {
+            CurrentPage--;
+            await LoadInquiries();
+        }
+    }
+
+    private async Task NextPage()
+    {
+        if (HasNextPage)
+        {
+            CurrentPage++;
+            await LoadInquiries();
+        }
+    }
+
+    private void OpenAddInquiryModal()
+    {
+        inquiry = new Inquiry();
+        isEditing = false;
+        ShowModal("addEditInquiryModal");
+    }
+
+    private async Task OpenEditInquiryModal(int inquiryNo)
+    {
+        isEditing = true;
+        var token = await AuthService.GetTokenAsync();
+        HttpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+        var response = await HttpClient.GetAsync($"Inquiry/Edit/{inquiryNo}");
+        if (response.IsSuccessStatusCode)
+        {
+            inquiry = await response.Content.ReadFromJsonAsync<Inquiry>();
+            ShowModal("addEditInquiryModal");
+        }
+        else
+        {
+            await ShowErrorToast($"Error fetching inquiry: {response.ReasonPhrase}");
+        }
+    }
+
+    private async Task OpenDeleteConfirmationModal(int inquiryNo)
+    {
+        inquiryToDeleteId = inquiryNo;
+        ShowModal("deleteConfirmationModal");
+    }
+
+    private async Task CloseAddEditInquiryModal()
+    {
+        HideModal("addEditInquiryModal");
+    }
+
+    private async Task CloseDeleteConfirmationModal()
+    {
+        HideModal("deleteConfirmationModal");
+    }
+
+    private async Task ConfirmDeleteInquiry()
+    {
+        try
+        {
+            var token = await AuthService.GetTokenAsync();
+            HttpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            var response = await HttpClient.DeleteAsync($"Inquiry/Delete/{inquiryToDeleteId}");
+            if (response.IsSuccessStatusCode)
+            {
+                await ShowSuccessToast("Inquiry deleted successfully.");
+                await LoadInquiries();
+            }
+            else
+            {
+                await ShowErrorToast($"Error deleting inquiry: {response.ReasonPhrase}");
+            }
+        }
+        catch (Exception ex)
+        {
+            await ShowErrorToast($"Error deleting inquiry: {ex.Message}");
+        }
+        finally
+        {
+            CloseDeleteConfirmationModal();
+        }
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        try
+        {
+            var token = await AuthService.GetTokenAsync();
+            HttpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            HttpResponseMessage response;
+            if (isEditing)
+            {
+                response = await HttpClient.PutAsJsonAsync("Inquiry", inquiry);
+                await ShowSuccessToast("Inquiry updated successfully.");
+            }
+            else
+            {
+                response = await HttpClient.PostAsJsonAsync("Inquiry", inquiry);
+                await ShowSuccessToast("Inquiry added successfully.");
+            }
+
+            if (response.IsSuccessStatusCode)
+            {
+                await LoadInquiries();
+            }
+            else
+            {
+                await ShowErrorToast($"Error saving inquiry: {response.ReasonPhrase}");
+            }
+        }
+        catch (Exception ex)
+        {
+            await ShowErrorToast($"Error saving inquiry: {ex.Message}");
+        }
+        finally
+        {
+            CloseAddEditInquiryModal();
+        }
+    }
+
+    private void ShowModal(string modalId)
+    {
+        JSRuntime.InvokeVoidAsync("eval", $"$('#{modalId}').modal('show');");
+    }
+
+    private void HideModal(string modalId)
+    {
+        JSRuntime.InvokeVoidAsync("eval", $"$('#{modalId}').modal('hide');");
+    }
+
+    private async Task ShowSuccessToast(string message)
+    {
+        await JSRuntime.InvokeVoidAsync("showSuccess", message);
+    }
+
+    private async Task ShowErrorToast(string message)
+    {
+        await JSRuntime.InvokeVoidAsync("showError", message);
+    }
+
+    private async Task ShowInfoToast(string message)
+    {
+        await JSRuntime.InvokeVoidAsync("showInfo", message);
+    }
+
+    private async Task ShowWarningToast(string message)
+    {
+        await JSRuntime.InvokeVoidAsync("showWarning", message);
+    }
+}
+
+@* 
+@code {
+    private IList<InquiryResponseModel> inquiries = new List<InquiryResponseModel>();
+    private IList<InquiryResponseModel> paginatedInquiries = new List<InquiryResponseModel>();
+    private Inquiry inquiry = new Inquiry();
+    private bool isEditing = false;
+    private int inquiryToDeleteId;
+    private string SearchQuery { get; set; } = string.Empty;
+    private int CurrentPage { get; set; } = 1;
+    private int PageSize { get; set; } = 10;
+    private int TotalPages { get; set; }
+    private bool HasPreviousPage => CurrentPage > 1;
+    private bool HasNextPage => CurrentPage < TotalPages;
+
+    private int StartEntry => (CurrentPage - 1) * PageSize + 1;
+    private int EndEntry => Math.Min(CurrentPage * PageSize, TotalEntries);
+    private int TotalEntries { get; set; }
+
+    private string Title => isEditing ? "Edit Inquiry" : "Add Inquiry";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadInquiries();
+    }
+
+    private async Task LoadInquiries()
+    {
+        try
+        {
             inquiries = (await InquiryService.GetAllInquiriesAsync()).ToList();
             TotalEntries = inquiries.Count;
             TotalPages = (int)Math.Ceiling(TotalEntries / (double)PageSize);
@@ -292,3 +526,4 @@
         await JSRuntime.InvokeVoidAsync("hideModal", modalId);
     }
 }
+ *@

@@ -26,6 +26,17 @@ builder.Services.AddAuthorization();
 builder.Services.AddDbContext<StudentSyncDbContext>(options =>
        options.UseSqlServer(builder.Configuration.GetConnectionString("StudentSyncBlazorCon")));
 
+builder.Services.AddHttpClient();
+
+var baseUrl = builder.Configuration.GetValue<string>("BaseUrl");
+builder.Services.AddScoped(sp => new HttpClient
+{
+    BaseAddress = new Uri(baseUrl),
+    Timeout = Timeout.InfiniteTimeSpan
+
+});
+
+
 // Add services to the container.
 builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();

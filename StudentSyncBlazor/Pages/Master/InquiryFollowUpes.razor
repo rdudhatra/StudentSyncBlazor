@@ -4,7 +4,7 @@
 @using Microsoft.AspNetCore.Components
 @using Microsoft.AspNetCore.Components.Forms
 @inject IJSRuntime JSRuntime
-@inject IInquiryFollowUpService InquiryFollowUpService
+@inject HttpClient HttpClient
 
 <Breadcrumb Title="Inquiry Follow-Up" BreadcrumbPageTitle="Inquiries"></Breadcrumb>
 
@@ -126,8 +126,238 @@
         </div>
     </div>
 </div>
-
 @code {
+    private IList<InquiryFollowUp> followUps = new List<InquiryFollowUp>();
+    private IList<InquiryFollowUp> paginatedFollowUps = new List<InquiryFollowUp>();
+    private InquiryFollowUp followUp = new InquiryFollowUp();
+    private bool isEditing = false;
+    private int followUpToDeleteId;
+    private string SearchQuery { get; set; } = string.Empty;
+    private int CurrentPage { get; set; } = 1;
+    private int PageSize { get; set; } = 10;
+    private int TotalPages { get; set; }
+    private bool HasPreviousPage => CurrentPage > 1;
+    private bool HasNextPage => CurrentPage < TotalPages;
+
+    private int StartEntry => (CurrentPage - 1) * PageSize + 1;
+    private int EndEntry => Math.Min(CurrentPage * PageSize, TotalEntries);
+    private int TotalEntries { get; set; }
+
+    private string Title => isEditing ? "Edit Inquiry Follow-Up" : "Add Inquiry Follow-Up";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadFollowUps();
+    }
+
+    private async Task LoadFollowUps()
+    {
+        try
+        {
+            var token = await AuthService.GetTokenAsync();
+            HttpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            var response = await HttpClient.GetAsync("InquiryFollowUp/GetAll");
+            if (response.IsSuccessStatusCode)
+            {
+                followUps = await response.Content.ReadFromJsonAsync<List<InquiryFollowUp>>();
+                TotalEntries = followUps.Count;
+                TotalPages = (int)Math.Ceiling(TotalEntries / (double)PageSize);
+                FilterFollowUps();
+            }
+            else
+            {
+                Console.WriteLine($"Error loading data: {response.ReasonPhrase}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading data: {ex.Message}");
+        }
+    }
+
+    private void FilterFollowUps()
+    {
+        var filteredFollowUps = string.IsNullOrEmpty(SearchQuery)
+            ? followUps
+            : followUps.Where(f => f.Remarks.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase)).ToList();
+
+        TotalEntries = filteredFollowUps.Count;
+        TotalPages = (int)Math.Ceiling(TotalEntries / (double)PageSize);
+        paginatedFollowUps = filteredFollowUps.Skip((CurrentPage - 1) * PageSize).Take(PageSize).ToList();
+    }
+
+    private void SearchInquiryFollowUps(ChangeEventArgs e)
+    {
+        SearchQuery = e.Value?.ToString() ?? string.Empty;
+        FilterFollowUps();
+    }
+
+    private async Task PreviousPage()
+    {
+        if (HasPreviousPage)
+        {
+            CurrentPage--;
+            await LoadFollowUps();
+        }
+    }
+
+    private async Task NextPage()
+    {
+        if (HasNextPage)
+        {
+            CurrentPage++;
+            await LoadFollowUps();
+        }
+    }
+
+    private async Task GoToPage(int pageNumber)
+    {
+        if (pageNumber >= 1 && pageNumber <= TotalPages)
+        {
+            CurrentPage = pageNumber;
+            await LoadFollowUps();
+        }
+    }
+
+    private void OpenAddInquiryFollowUpModal()
+    {
+        followUp = new InquiryFollowUp();
+        isEditing = false;
+        ShowModal("addEditInquiryFollowUpModal");
+    }
+
+    private async Task OpenEditInquiryFollowUpModal(int followUpId)
+    {
+        isEditing = true;
+        var token = await AuthService.GetTokenAsync();
+        HttpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+        var response = await HttpClient.GetAsync($"InquiryFollowUp/Edit/{followUpId}");
+        if (response.IsSuccessStatusCode)
+        {
+            followUp = await response.Content.ReadFromJsonAsync<InquiryFollowUp>();
+            ShowModal("addEditInquiryFollowUpModal");
+        }
+        else
+        {
+            await ShowErrorToast($"Error fetching follow-up: {response.ReasonPhrase}");
+        }
+    }
+
+    private void OpenDeleteConfirmationModal(int followUpId)
+    {
+        followUpToDeleteId = followUpId;
+        ShowModal("deleteConfirmationModal");
+    }
+
+    private void CloseAddEditInquiryFollowUpModal()
+    {
+        HideModal("addEditInquiryFollowUpModal");
+    }
+
+    private void CloseDeleteConfirmationModal()
+    {
+        HideModal("deleteConfirmationModal");
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        try
+        {
+            var token = await AuthService.GetTokenAsync();
+            HttpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            HttpResponseMessage response;
+            if (isEditing)
+            {
+                response = await HttpClient.PutAsJsonAsync("InquiryFollowUp/Update", followUp);
+                await ShowSuccessToast("Inquiry Follow-Up updated successfully.");
+            }
+            else
+            {
+                response = await HttpClient.PostAsJsonAsync("InquiryFollowUp/Create", followUp);
+                await ShowSuccessToast("Inquiry Follow-Up added successfully.");
+            }
+
+            if (response.IsSuccessStatusCode)
+            {
+                await LoadFollowUps();
+            }
+            else
+            {
+                await ShowErrorToast($"Error saving follow-up: {response.ReasonPhrase}");
+            }
+        }
+        catch (Exception ex)
+        {
+            await ShowErrorToast($"Error saving follow-up: {ex.Message}");
+        }
+        finally
+        {
+            CloseAddEditInquiryFollowUpModal();
+        }
+    }
+
+    private async Task ConfirmDeleteInquiryFollowUp()
+    {
+        try
+        {
+            var token = await AuthService.GetTokenAsync();
+            HttpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            var response = await HttpClient.DeleteAsync($"InquiryFollowUp/Delete/{followUpToDeleteId}");
+            if (response.IsSuccessStatusCode)
+            {
+                await ShowSuccessToast("Inquiry Follow-Up deleted successfully.");
+                await LoadFollowUps();
+            }
+            else
+            {
+                await ShowErrorToast($"Error deleting follow-up: {response.ReasonPhrase}");
+            }
+        }
+        catch (Exception ex)
+        {
+            await ShowErrorToast($"Error deleting follow-up: {ex.Message}");
+        }
+        finally
+        {
+            CloseDeleteConfirmationModal();
+        }
+    }
+
+    private async Task ShowModal(string modalId)
+    {
+        await JSRuntime.InvokeVoidAsync("eval", $"$('#{modalId}').modal('show');");
+    }
+
+    private async Task HideModal(string modalId)
+    {
+        await JSRuntime.InvokeVoidAsync("eval", $"$('#{modalId}').modal('hide');");
+    }
+
+    private async Task ShowSuccessToast(string message)
+    {
+        await JSRuntime.InvokeVoidAsync("toastr.success", message);
+    }
+
+    private async Task ShowErrorToast(string message)
+    {
+        await JSRuntime.InvokeVoidAsync("toastr.error", message);
+    }
+
+    private async Task ShowInfoToast(string message)
+    {
+        await JSRuntime.InvokeVoidAsync("toastr.info", message);
+    }
+
+    private async Task ShowWarningToast(string message)
+    {
+        await JSRuntime.InvokeVoidAsync("toastr.warning", message);
+    }
+}
+@* @code {
     private IList<InquiryFollowUp> followUps = new List<InquiryFollowUp>(); 
     private IList<InquiryFollowUp> paginatedFollowUps = new List<InquiryFollowUp>();
     private InquiryFollowUp followUp = new InquiryFollowUp();
@@ -267,4 +497,4 @@
         await JSRuntime.InvokeVoidAsync("hideModal", modalId);
     }
 }
-            
+           *@  

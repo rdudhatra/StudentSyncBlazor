@@ -5,7 +5,7 @@
 @using Microsoft.AspNetCore.Components.Forms
 @using StudentSyncBlazor.Data.ResponseModel
 @inject IJSRuntime JSRuntime
-@inject IStudentAttendanceService StudentAttendanceService
+@inject HttpClient HttpClient
 
 <Breadcrumb Title="Student Attendance" BreadcrumbPageTitle="Students"></Breadcrumb>
 
@@ -124,8 +124,249 @@
         </div>
     </div>
 </div>
-
 @code {
+    private List<StudentAttendanceResponseModel> attendances = new List<StudentAttendanceResponseModel>();
+    private List<StudentAttendanceResponseModel> paginatedAttendances = new List<StudentAttendanceResponseModel>();
+    private StudentAttendance studentAttendance = new StudentAttendance();
+    private bool isEditing = false;
+    private int studentAttendanceToDeleteId;
+    private string SearchQuery { get; set; } = string.Empty;
+
+    private int CurrentPage { get; set; } = 1;
+    private int PageSize { get; set; } = 10;
+    private int TotalEntries { get; set; }
+    private int TotalPages { get; set; }
+    private bool HasPreviousPage => CurrentPage > 1;
+    private bool HasNextPage => CurrentPage < TotalPages;
+
+    private int StartEntry => (CurrentPage - 1) * PageSize + 1;
+    private int EndEntry => Math.Min(CurrentPage * PageSize, TotalEntries);
+
+    private string Title => isEditing ? "Edit Student Attendance" : "Add Student Attendance";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadStudentAttendances();
+    }
+
+    private async Task LoadStudentAttendances()
+    {
+        try
+        {
+            var token = await AuthService.GetTokenAsync(); // Get the token
+            HttpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            var response = await HttpClient.GetAsync("StudentAttendance/GetAll");
+            if (response.IsSuccessStatusCode)
+            {
+                var allAttendances = await response.Content.ReadFromJsonAsync<List<StudentAttendanceResponseModel>>();
+                if (allAttendances == null || !allAttendances.Any())
+                {
+                    attendances = new List<StudentAttendanceResponseModel>();
+                }
+                else
+                {
+                    attendances = allAttendances;
+                    FilterAttendances();
+                    TotalEntries = attendances.Count;
+                    TotalPages = (int)Math.Ceiling(TotalEntries / (double)PageSize);
+                    paginatedAttendances = attendances.Skip((CurrentPage - 1) * PageSize).Take(PageSize).ToList();
+                }
+                StateHasChanged();
+            }
+            else
+            {
+                Console.WriteLine($"Error loading data: {response.ReasonPhrase}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading data: {ex.Message}");
+        }
+    }
+
+    private void FilterAttendances()
+    {
+        var filteredAttendances = string.IsNullOrEmpty(SearchQuery)
+            ? attendances
+            : attendances.Where(a => a.EnrollmentNo.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase)).ToList();
+
+        TotalEntries = filteredAttendances.Count;
+        TotalPages = (int)Math.Ceiling(TotalEntries / (double)PageSize);
+        paginatedAttendances = filteredAttendances.Skip((CurrentPage - 1) * PageSize).Take(PageSize).ToList();
+    }
+
+    private void SearchAttendances(ChangeEventArgs e)
+    {
+        SearchQuery = e.Value.ToString();
+        FilterAttendances();
+    }
+
+    private void OpenAddStudentAttendanceModal()
+    {
+        studentAttendance = new StudentAttendance(); // Reset the form
+        isEditing = false;
+        ShowModal("addEditStudentAttendanceModal");
+    }
+
+    private async Task OpenEditStudentAttendanceModal(int studentAttendanceId)
+    {
+        isEditing = true;
+        var token = await AuthService.GetTokenAsync();
+        HttpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+        var response = await HttpClient.GetAsync($"StudentAttendance/Edit/{studentAttendanceId}");
+        if (response.IsSuccessStatusCode)
+        {
+            studentAttendance = await response.Content.ReadFromJsonAsync<StudentAttendance>();
+            ShowModal("addEditStudentAttendanceModal");
+        }
+        else
+        {
+            await ShowErrorToast($"Error fetching student attendance: {response.ReasonPhrase}");
+        }
+    }
+
+    private void OpenDeleteConfirmationModal(int studentAttendanceId)
+    {
+        studentAttendanceToDeleteId = studentAttendanceId;
+        ShowModal("deleteConfirmationModal");
+    }
+
+    private void CloseAddEditStudentAttendanceModal()
+    {
+         HideModal("addEditStudentAttendanceModal");
+    }
+
+    private void CloseDeleteConfirmationModal()
+    {
+         HideModal("deleteConfirmationModal");
+    }
+ 
+    private async Task HandleValidSubmit()
+    {
+        try
+        {
+            var token = await AuthService.GetTokenAsync();
+            HttpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            HttpResponseMessage response;
+            if (isEditing)
+            {
+                response = await HttpClient.PutAsJsonAsync("StudentAttendance/Update", studentAttendance);
+                await ShowSuccessToast("Attendance updated successfully.");
+            }
+            else
+            {
+                response = await HttpClient.PostAsJsonAsync("StudentAttendance/Create", studentAttendance);
+                await ShowSuccessToast("Attendance added successfully.");
+            }
+
+            if (response.IsSuccessStatusCode)
+            {
+                await LoadStudentAttendances();
+            }
+            else
+            {
+                await ShowErrorToast($"Error saving attendance: {response.ReasonPhrase}");
+            }
+        }
+        catch (Exception ex)
+        {
+            await ShowErrorToast($"Error saving attendance: {ex.Message}");
+        }
+        finally
+        {
+            CloseAddEditStudentAttendanceModal();
+        }
+    }
+
+    private async Task ConfirmDeleteStudentAttendance()
+    {
+        try
+        {
+            var token = await AuthService.GetTokenAsync();
+            HttpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            var response = await HttpClient.DeleteAsync($"StudentAttendance/Delete/{studentAttendanceToDeleteId}");
+            if (response.IsSuccessStatusCode)
+            {
+                await ShowSuccessToast("Attendance deleted successfully.");
+                await LoadStudentAttendances();
+            }
+            else
+            {
+                await ShowErrorToast($"Error deleting attendance: {response.ReasonPhrase}");
+            }
+        }
+        catch (Exception ex)
+        {
+            await ShowErrorToast($"Error deleting attendance: {ex.Message}");
+        }
+        finally
+        {
+             CloseDeleteConfirmationModal();
+        }
+    }
+
+    private void ShowModal(string modalId)
+    {
+        JSRuntime.InvokeVoidAsync("eval", $"$('#{modalId}').modal('show');");
+    }
+
+    private void HideModal(string modalId)
+    {
+        JSRuntime.InvokeVoidAsync("eval", $"$('#{modalId}').modal('hide');");
+    }
+
+    private async Task ShowSuccessToast(string message)
+    {
+        await JSRuntime.InvokeVoidAsync("toastr.success", message);
+    }
+
+    private async Task ShowErrorToast(string message)
+    {
+        await JSRuntime.InvokeVoidAsync("toastr.error", message);
+    }
+
+    private async Task ShowInfoToast(string message)
+    {
+        await JSRuntime.InvokeVoidAsync("toastr.info", message);
+    }
+
+    private async Task ShowWarningToast(string message)
+    {
+        await JSRuntime.InvokeVoidAsync("toastr.warning", message);
+    }
+
+    private void PreviousPage()
+    {
+        if (HasPreviousPage)
+        {
+            CurrentPage--;
+            FilterAttendances();
+        }
+    }
+
+    private void NextPage()
+    {
+        if (HasNextPage)
+        {
+            CurrentPage++;
+            FilterAttendances();
+        }
+    }
+
+    private async Task GoToPage(int pageNumber)
+    {
+        if (pageNumber >= 1 && pageNumber <= TotalPages)
+        {
+            CurrentPage = pageNumber;
+            await LoadStudentAttendances();
+        }
+    }
+}
+@* @code {
     private List<StudentAttendanceResponseModel> attendances = new List<StudentAttendanceResponseModel>();
     private List<StudentAttendanceResponseModel> paginatedAttendances = new List<StudentAttendanceResponseModel>();
     private StudentAttendance studentAttendance = new StudentAttendance();
@@ -265,3 +506,4 @@
         }
     }
 }
+ *@

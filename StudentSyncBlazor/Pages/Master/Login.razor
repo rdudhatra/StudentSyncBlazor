@@ -2,12 +2,12 @@
 @layout EmptyLayout
 
 @inject NavigationManager Navigation
-@inject IAuthService AuthService
+@inject HttpClient Http
 @inject CustomAuthenticationStateProvider AuthStateProvider
-
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @using StudentSyncBlazor.Core.Services.Interface
 @using StudentSyncBlazor.Data.ViewModels
+@using System.Net.Http.Json
 
 
 <PageTitle>Login</PageTitle>
@@ -79,20 +79,58 @@
     private bool loginSuccess = false;
     private string errorMessage;
 
+    // private async Task HandleValidSubmit()
+    // {
+    //     var result = await AuthService.LoginAsync(loginModel);
+
+    //     if (result.Succeeded)
+    //     {
+    //         await AuthStateProvider.MarkUserAsAuthenticated("username", "email@example.com");
+    //         loginSuccess = true;
+    //         Navigation.NavigateTo("/");
+    //     }   
+    //     else
+    //     {
+    //         errorMessage = result.Messages.FirstOrDefault() ?? "Login failed. Please try again.";
+
+    //     }
+    // }
+    
     private async Task HandleValidSubmit()
     {
-        var result = await AuthService.LoginAsync(loginModel);
-
-        if (result.Succeeded)
+        try
         {
-            await AuthStateProvider.MarkUserAsAuthenticated("username", "email@example.com");
-            loginSuccess = true;
-            Navigation.NavigateTo("/");
-        }   
-        else
-        {
-            errorMessage = result.Messages.FirstOrDefault() ?? "Login failed. Please try again.";
+            var response = await Http.PostAsJsonAsync("token/token", loginModel);
 
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<TokenResponse>(); // Adjust the response model accordingly
+                if (result != null && !string.IsNullOrEmpty(result.Token))
+                {
+                    await AuthStateProvider.MarkUserAsAuthenticated(result.Token);
+                    loginSuccess = true;
+                    Navigation.NavigateTo("/");
+                }
+                else
+                {
+                    errorMessage = "Login failed. Please try again.";
+                }
+            }
+            else
+            {
+                errorMessage = "Invalid email or password.";
+            }
         }
-    }   
+        catch (Exception ex)
+        {
+            errorMessage = $"An error occurred: {ex.Message}";
+        }
+    }
+
+    private class TokenResponse
+    {
+        public string? Token { get; set; }
+        public DateTime Expiration { get; set; }
+    }
+
 }

@@ -207,8 +207,8 @@
 @using StudentSyncBlazor.Core.Services.Interface
 @using Microsoft.AspNetCore.Components
 @using Microsoft.AspNetCore.Components.Forms 
-@inject ICourseServices CourseServices
 @inject IJSRuntime JSRuntime
+@inject HttpClient HttpClient
 
 <Breadcrumb Title="Course" BreadcrumbPageTitle="Courses"></Breadcrumb>
 
@@ -331,8 +331,223 @@
         </div>
     </div>
 </div>
-
 @code {
+    private string SearchQuery { get; set; } = string.Empty;
+    private List<Course> courses = new List<Course>();
+    private List<Course> paginatedCourses = new List<Course>();
+    private Course course = new Course();
+    private bool isEditing = false;
+    private int courseToDeleteId;
+
+    private int CurrentPage { get; set; } = 1;
+    private int PageSize { get; set; } = 10;
+    private int TotalPages { get; set; }
+    private bool HasPreviousPage => CurrentPage > 1;
+    private bool HasNextPage => CurrentPage < TotalPages;
+    private int TotalEntries { get; set; }
+
+    private int StartEntry => (CurrentPage - 1) * PageSize + 1;
+    private int EndEntry => Math.Min(CurrentPage * PageSize, TotalEntries);
+
+    private string Title => isEditing ? "Edit Course" : "Add Course";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCourses();
+    }
+
+    private async Task LoadCourses()
+    {
+        try
+        {
+            var token = await AuthService.GetTokenAsync();
+            HttpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            var response = await HttpClient.GetAsync("Course/GetAll");
+            if (response.IsSuccessStatusCode)
+            {
+                var allCourses = await response.Content.ReadFromJsonAsync<List<Course>>();
+                if (allCourses == null || !allCourses.Any())
+                {
+                    Console.WriteLine("No data returned from service.");
+                    courses = new List<Course>();
+                }
+                else
+                {
+                    Console.WriteLine($"Data loaded: {allCourses.Count} items.");
+                    courses = allCourses;
+                    FilterCourses();
+                    TotalEntries = courses.Count;
+                    TotalPages = (int)Math.Ceiling(courses.Count / (double)PageSize);
+                    paginatedCourses = courses.Skip((CurrentPage - 1) * PageSize).Take(PageSize).ToList();
+                }
+                StateHasChanged(); // Force UI to update
+            }
+            else
+            {
+                Console.WriteLine($"Error loading data: {response.ReasonPhrase}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading data: {ex.Message}");
+        }
+    }
+
+    private void FilterCourses()
+    {
+        var filteredCourses = string.IsNullOrEmpty(SearchQuery)
+            ? courses
+            : courses.Where(c => c.CourseName.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase)).ToList();
+
+        TotalEntries = filteredCourses.Count;
+        TotalPages = (int)Math.Ceiling(TotalEntries / (double)PageSize);
+        paginatedCourses = filteredCourses.Skip((CurrentPage - 1) * PageSize).Take(PageSize).ToList();
+    }
+
+    private async Task SearchCourses(ChangeEventArgs e)
+    {
+        SearchQuery = e.Value?.ToString() ?? string.Empty;
+        FilterCourses();
+    }
+
+    private async Task PreviousPage()
+    {
+        if (HasPreviousPage)
+        {
+            CurrentPage--;
+            await LoadCourses();
+        }
+    }
+
+    private async Task NextPage()
+    {
+        if (HasNextPage)
+        {
+            CurrentPage++;
+            await LoadCourses();
+        }
+    }
+
+    private void OpenAddCourseModal()
+    {
+        course = new Course { CreatedBy = "Admin", CreatedDate = DateTime.Now }; // Set CreatedBy and CreatedDate here
+        isEditing = false;
+        ShowModal("addEditCourseModal");
+    }
+
+    private async Task OpenEditCourseModal(int courseId)
+    {
+        isEditing = true;
+        var token = await AuthService.GetTokenAsync();
+        HttpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+        var response = await HttpClient.GetAsync($"Course/GetById/{courseId}");
+        if (response.IsSuccessStatusCode)
+        {
+            course = await response.Content.ReadFromJsonAsync<Course>();
+            ShowModal("addEditCourseModal");
+        }
+        else
+        {
+            await JSRuntime.InvokeVoidAsync("toastr.error", $"Error fetching course: {response.ReasonPhrase}");
+        }
+    }
+
+    private void CloseAddEditCourseModal()
+    {
+        HideModal("addEditCourseModal");
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        try
+        {
+            var token = await AuthService.GetTokenAsync();
+            HttpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            HttpResponseMessage response;
+            if (isEditing)
+            {
+                course.UpdatedBy = "Admin"; // Set UpdatedBy here
+                course.UpdatedDate = DateTime.Now;
+                response = await HttpClient.PutAsJsonAsync("Course/UpdateCourse", course);
+                await JSRuntime.InvokeVoidAsync("toastr.success", "Course updated successfully");
+            }
+            else
+            {
+                course.UpdatedBy = null;
+                course.UpdatedDate = null;
+                response = await HttpClient.PostAsJsonAsync("Course/AddCourse", course);
+                await JSRuntime.InvokeVoidAsync("toastr.success", "Course added successfully");
+            }
+
+            if (!response.IsSuccessStatusCode)
+            {
+                await JSRuntime.InvokeVoidAsync("toastr.error", $"Error saving course: {response.ReasonPhrase}");
+            }
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("toastr.error", $"Error saving course: {ex.Message}");
+        }
+        finally
+        {
+            CloseAddEditCourseModal();
+            await LoadCourses();
+        }
+    }
+
+    private void OpenDeleteConfirmationModal(int courseId)
+    {
+        courseToDeleteId = courseId;
+        ShowModal("deleteConfirmationModal");
+    }
+
+    private void CloseDeleteConfirmationModal()
+    {
+        HideModal("deleteConfirmationModal");
+    }
+
+    private async Task ConfirmDeleteCourse()
+    {
+        try
+        {
+            var token = await AuthService.GetTokenAsync();
+            HttpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            var response = await HttpClient.DeleteAsync($"Course/DeleteCourse/{courseToDeleteId}");
+            if (response.IsSuccessStatusCode)
+            {
+                await JSRuntime.InvokeVoidAsync("toastr.success", "Course deleted successfully");
+                await LoadCourses();
+            }
+            else
+            {
+                await JSRuntime.InvokeVoidAsync("toastr.error", $"Error deleting course: {response.ReasonPhrase}");
+            }
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("toastr.error", $"Error deleting course: {ex.Message}");
+        }
+        finally
+        {
+            CloseDeleteConfirmationModal();
+        }
+    }
+
+    private void ShowModal(string modalId)
+    {
+        JSRuntime.InvokeVoidAsync("showModal", modalId);
+    }
+
+    private void HideModal(string modalId)
+    {
+        JSRuntime.InvokeVoidAsync("hideModal", modalId);
+    }
+}
+@* @code {
     private string SearchQuery { get; set; } = string.Empty;
 
     private List<Course> courses = new List<Course>();
@@ -487,3 +702,4 @@
         JSRuntime.InvokeVoidAsync("hideModal", modalId);
     }
 }
+ *@

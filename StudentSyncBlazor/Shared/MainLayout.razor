@@ -22,7 +22,7 @@
 </div>
  *@
 
-@inherits LayoutComponentBase
+@* @inherits LayoutComponentBase
 @inject IJSRuntime JSRuntime
 
 <PageTitle>StudentSyncBlazor</PageTitle>
@@ -58,11 +58,11 @@
             });
         }
     }
-}
+} *@
 
 
 
-@* @inherits LayoutComponentBase
+@inherits LayoutComponentBase
 @inject IJSRuntime JSRuntime
 @using Microsoft.AspNetCore.Components.Authorization
 @inject AuthenticationStateProvider AuthenticationStateProvider
@@ -107,4 +107,4 @@
         }
     }
 
-} *@
+}

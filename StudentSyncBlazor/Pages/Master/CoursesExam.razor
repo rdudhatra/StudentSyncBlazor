@@ -5,7 +5,8 @@
 @using Microsoft.AspNetCore.Components.Forms
 @using StudentSyncBlazor.Data.ResponseModel
 @inject IJSRuntime JSRuntime
-@inject ICourseExamServices CourseExamService
+@inject HttpClient HttpClient
+
 
 <Breadcrumb Title="CourseExam" BreadcrumbPageTitle="Courses"></Breadcrumb>
 
@@ -134,8 +135,210 @@
         </div>
     </div>
 </div>
-
 @code {
+    private string SearchQuery { get; set; } = string.Empty;
+    private List<CourseExamResponseModel> courseExams = new List<CourseExamResponseModel>();
+    private List<CourseExamResponseModel> paginatedCourseExams = new List<CourseExamResponseModel>();
+    private CourseExam courseExam = new CourseExam();
+    private bool isEditing = false;
+    private int courseExamToDeleteId;
+
+    private int CurrentPage { get; set; } = 1;
+    private int PageSize { get; set; } = 10;
+    private int TotalPages { get; set; }
+    private bool HasPreviousPage => CurrentPage > 1;
+    private bool HasNextPage => CurrentPage < TotalPages;
+    private int TotalEntries { get; set; }
+    private int StartEntry => (CurrentPage - 1) * PageSize + 1;
+    private int EndEntry => Math.Min(CurrentPage * PageSize, TotalEntries);
+
+    private string Title => isEditing ? "Edit Course Exam" : "Add Course Exam";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCourseExams();
+    }
+
+    private async Task LoadCourseExams()
+    {
+        try
+        {
+            var token = await AuthService.GetTokenAsync();
+            HttpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            var response = await HttpClient.GetAsync("CourseExam/GetAll");
+            if (response.IsSuccessStatusCode)
+            {
+                var allCourseExams = await response.Content.ReadFromJsonAsync<List<CourseExamResponseModel>>();
+                courseExams = allCourseExams ?? new List<CourseExamResponseModel>();
+                TotalEntries = courseExams.Count;
+                FilterCourseExams();
+                TotalPages = (int)Math.Ceiling(courseExams.Count / (double)PageSize);
+                paginatedCourseExams = courseExams.Skip((CurrentPage - 1) * PageSize).Take(PageSize).ToList();
+            }
+            else
+            {
+                Console.WriteLine($"Error loading data: {response.ReasonPhrase}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading data: {ex.Message}");
+        }
+    }
+
+    private void FilterCourseExams()
+    {
+        if (!string.IsNullOrEmpty(SearchQuery))
+        {
+            var filteredCourseExams = courseExams.Where(exam =>
+                exam.ExamTitle.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase) ||
+                exam.ExamType.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase) ||
+                exam.Remarks.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase)).ToList();
+
+            TotalEntries = filteredCourseExams.Count;
+            TotalPages = (int)Math.Ceiling(TotalEntries / (double)PageSize);
+            paginatedCourseExams = filteredCourseExams.Skip((CurrentPage - 1) * PageSize).Take(PageSize).ToList();
+        }
+    }
+
+    private async Task SearchCourseExams(ChangeEventArgs e)
+    {
+        SearchQuery = e.Value?.ToString() ?? string.Empty;
+        FilterCourseExams();
+    }
+
+    private async Task PreviousPage()
+    {
+        if (HasPreviousPage)
+        {
+            CurrentPage--;
+            await LoadCourseExams();
+        }
+    }
+
+    private async Task NextPage()
+    {
+        if (HasNextPage)
+        {
+            CurrentPage++;
+            await LoadCourseExams();
+        }
+    }
+
+    private void OpenAddCourseExamModal()
+    {
+        courseExam = new CourseExam();
+        isEditing = false;
+        ShowModal("addEditCourseExamModal");
+    }
+
+    private async Task OpenEditCourseExamModal(int courseExamId)
+    {
+        isEditing = true;
+        var token = await AuthService.GetTokenAsync();
+        HttpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+        var response = await HttpClient.GetAsync($"CourseExam/Edit/{courseExamId}");
+        if (response.IsSuccessStatusCode)
+        {
+            courseExam = await response.Content.ReadFromJsonAsync<CourseExam>();
+            ShowModal("addEditCourseExamModal");
+        }
+        else
+        {
+            await ShowErrorToast($"Error fetching course exam: {response.ReasonPhrase}");
+        }
+    }
+
+    private void OpenDeleteConfirmationModal(int courseExamId)
+    {
+        courseExamToDeleteId = courseExamId;
+        ShowModal("deleteConfirmationModal");
+    }
+
+    private void CloseAddEditCourseExamModal()
+    {
+        HideModal("addEditCourseExamModal");
+    }
+
+    private void CloseDeleteConfirmationModal()
+    {
+        HideModal("deleteConfirmationModal");
+    }
+
+    private async Task ConfirmDeleteCourseExam()
+    {
+        var token = await AuthService.GetTokenAsync();
+        HttpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+        var response = await HttpClient.DeleteAsync($"CourseExam/Delete/{courseExamToDeleteId}");
+        if (response.IsSuccessStatusCode)
+        {
+            await ShowSuccessToast("Course Exam deleted successfully.");
+            await LoadCourseExams();
+        }
+        else
+        {
+            await ShowErrorToast($"Error deleting course exam: {response.ReasonPhrase}");
+        }
+        CloseDeleteConfirmationModal();
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        var token = await AuthService.GetTokenAsync();
+        HttpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+        HttpResponseMessage response;
+        if (isEditing)
+        {
+            response = await HttpClient.PutAsJsonAsync("CourseExam/Update", courseExam);
+            await ShowSuccessToast("Course Exam updated successfully.");
+        }
+        else
+        {
+            response = await HttpClient.PostAsJsonAsync("CourseExam/Create", courseExam);
+            await ShowSuccessToast("Course Exam added successfully.");
+        }
+
+        if (response.IsSuccessStatusCode)
+        {
+            await LoadCourseExams();
+        }
+        else
+        {
+            await ShowErrorToast($"Error saving course exam: {response.ReasonPhrase}");
+        }
+        CloseAddEditCourseExamModal();
+    }
+
+    private async Task ShowModal(string modalId)
+    {
+        await JSRuntime.InvokeVoidAsync("showModal", modalId);
+    }
+
+    private async Task HideModal(string modalId)
+    {
+        await JSRuntime.InvokeVoidAsync("hideModal", modalId);
+    }
+
+    private async Task ShowSuccessToast(string message)
+    {
+        await JSRuntime.InvokeVoidAsync("toastr.success", message);
+    }
+
+    private async Task ShowErrorToast(string message)
+    {
+        await JSRuntime.InvokeVoidAsync("toastr.error", message);
+    }
+
+    public void Dispose()
+    {
+        HttpClient.DefaultRequestHeaders.Authorization = null;
+    }
+}
+@* @code {
     private string SearchQuery { get; set; } = string.Empty;
 
     private List<CourseExamResponseModel> courseExams = new List<CourseExamResponseModel>();
@@ -293,3 +496,4 @@
         await JSRuntime.InvokeVoidAsync("hideModal", modalId);
     }
 }
+ *@

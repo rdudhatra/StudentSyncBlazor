@@ -180,7 +180,22 @@ namespace StudentSyncBlazor.Core.Services
             _context = context;
             _authStateProvider = authStateProvider;
         }
+        public async Task<string> GetTokenAsync()
+        {
+            // Here you should implement your logic to retrieve the token.
+            // This can be from a stored value, an API call, etc.
+            // For example, you might retrieve the token from HttpContext.
 
+            var token = _httpContextAccessor.HttpContext.Request.Cookies["AuthToken"];
+
+            if (string.IsNullOrEmpty(token))
+            {
+                // Optionally handle the case where the token is not found
+                throw new InvalidOperationException("No auth token found.");
+            }
+
+            return await Task.FromResult(token);
+        }
         public async Task<IResult> RegisterAsync(RegisterViewModel model)
         {
             try
@@ -253,7 +268,7 @@ namespace StudentSyncBlazor.Core.Services
 
                 if (model.Email == AdminEmail && model.Password == AdminPassword)
                 {
-                    await _authStateProvider.MarkUserAsAuthenticated("Admin", AdminEmail);
+                  //  await _authStateProvider.MarkUserAsAuthenticated("Admin", AdminEmail);
                     return Result.Success("Admin login successful.");
                 }
 

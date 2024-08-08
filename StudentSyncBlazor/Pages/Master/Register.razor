@@ -4,9 +4,7 @@
 @using StudentSyncBlazor.Core.Services.Interface
 @using StudentSyncBlazor.Data.ViewModels
 @inject NavigationManager Navigation
-@inject IAuthService AuthService
-
-
+@inject HttpClient HttpClient
 
 <PageTitle>Register</PageTitle>
 
@@ -89,7 +87,37 @@
         </div>
     </div>
 </div>
+
 @code {
+    private RegisterViewModel registerModel = new RegisterViewModel();
+    private bool registerSuccess = false;
+    private bool termsAccepted = false;
+    private string errorMessage;
+
+    private async Task HandleValidSubmit()
+    {
+        try
+        {
+            var response = await HttpClient.PostAsJsonAsync("Auth/register", registerModel);
+
+            if (response.IsSuccessStatusCode)
+            {
+                registerSuccess = true;
+                Navigation.NavigateTo("/login");
+            }
+            else
+            {
+                var content = await response.Content.ReadAsStringAsync();
+                errorMessage = content ?? "Registration failed. Please try again.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"An error occurred: {ex.Message}";
+        }
+    }
+}
+@* @code {
     private RegisterViewModel registerModel = new RegisterViewModel();
     private bool registerSuccess = false;
     private bool termsAccepted = false;
@@ -109,5 +137,5 @@
 
         }
     }
-}
+} *@
 

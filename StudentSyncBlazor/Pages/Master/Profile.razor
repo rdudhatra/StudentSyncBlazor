@@ -1,4 +1,4 @@
-﻿@page "/profile"
+﻿@* @page "/profile"
 @using StudentSyncBlazor.Data.ViewModels
 @inject NavigationManager Navigation
 
@@ -50,10 +50,10 @@
             Dear User, you can view the profile but cannot make any changes.
         </h6>
     </div>
-</div>
+</div> *@
 
 
-@*                 @page "/profile"
+  @page "/profile"
 @using StudentSyncBlazor.Core.Services.Interface
 @using StudentSyncBlazor.Data.ViewModels
 @inject IProfileService ProfileService
@@ -110,4 +110,3 @@
         passwordInputType = passwordInputType == "password" ? "text" : "password";
     }
 }
- *@

@@ -5,7 +5,8 @@
 @using Microsoft.AspNetCore.Components.Forms
 @using StudentSyncBlazor.Data.ResponseModel
 @inject IJSRuntime JSRuntime
-@inject ICourseFeeService CourseFeeService
+@inject HttpClient HttpClient
+
 
 <Breadcrumb Title="CourseFee" BreadcrumbPageTitle="Courses"></Breadcrumb>
 
@@ -135,8 +136,236 @@
         </div>
     </div>
 </div>
-
 @code {
+    private string SearchQuery { get; set; } = string.Empty;
+
+    private List<CourseFeeResponseModel> courseFees = new List<CourseFeeResponseModel>();
+    private List<CourseFeeResponseModel> paginatedCourseFees = new List<CourseFeeResponseModel>();
+    private Data.Models.CourseFee courseFee = new Data.Models.CourseFee();
+    private bool isEditing = false;
+    private int courseFeeToDeleteId;
+
+    private int CurrentPage { get; set; } = 1;
+    private int PageSize { get; set; } = 10;
+    private int TotalEntries { get; set; }
+    private int TotalPages { get; set; }
+    private bool HasPreviousPage => CurrentPage > 1;
+    private bool HasNextPage => CurrentPage < TotalPages;
+
+    private int StartEntry => (CurrentPage - 1) * PageSize + 1;
+    private int EndEntry => Math.Min(CurrentPage * PageSize, TotalEntries);
+
+    private string Title => isEditing ? "Edit Course Fee" : "Add Course Fee";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCourseFees();
+    }
+
+    private async Task LoadCourseFees()
+    {
+        try
+        {
+            var token = await AuthService.GetTokenAsync(); // Get the token
+            HttpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            var response = await HttpClient.GetAsync("CourseFee/GetAll");
+            if (response.IsSuccessStatusCode)
+            {
+                var allCourseFees = await response.Content.ReadFromJsonAsync<List<CourseFeeResponseModel>>();
+                if (allCourseFees == null || !allCourseFees.Any())
+                {
+                    courseFees = new List<CourseFeeResponseModel>();
+                }
+                else
+                {
+                    courseFees = allCourseFees;
+                    FilterCourseFees();
+                    TotalEntries = courseFees.Count;
+                    TotalPages = (int)Math.Ceiling(TotalEntries / (double)PageSize);
+                    paginatedCourseFees = courseFees.Skip((CurrentPage - 1) * PageSize).Take(PageSize).ToList();
+                }
+                StateHasChanged(); // Force UI to update
+            }
+            else
+            {
+                Console.WriteLine($"Error loading data: {response.ReasonPhrase}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading data: {ex.Message}");
+        }
+    }
+
+    private void FilterCourseFees()
+    {
+        var filteredCourseFees = courseFees
+            .Where(cf => cf.TotalFees.ToString().Contains(SearchQuery, StringComparison.OrdinalIgnoreCase) ||
+                         cf.DownPayment.ToString().Contains(SearchQuery, StringComparison.OrdinalIgnoreCase) ||
+                         cf.NoofInstallment.ToString().Contains(SearchQuery, StringComparison.OrdinalIgnoreCase) ||
+                         cf.InstallmentAmount.ToString().Contains(SearchQuery, StringComparison.OrdinalIgnoreCase) ||
+                         cf.Remarks.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        TotalEntries = filteredCourseFees.Count;
+        TotalPages = (int)Math.Ceiling(TotalEntries / (double)PageSize);
+        paginatedCourseFees = filteredCourseFees.Skip((CurrentPage - 1) * PageSize).Take(PageSize).ToList();
+    }
+
+    private async Task SearchCourseFees(ChangeEventArgs e)
+    {
+        SearchQuery = e.Value?.ToString() ?? string.Empty;
+        FilterCourseFees();
+    }
+
+    private async Task PreviousPage()
+    {
+        if (HasPreviousPage)
+        {
+            CurrentPage--;
+            await LoadCourseFees();
+        }
+    }
+
+    private async Task NextPage()
+    {
+        if (HasNextPage)
+        {
+            CurrentPage++;
+            await LoadCourseFees();
+        }
+    }
+
+    private void OpenAddCourseFeeModal()
+    {
+        courseFee = new Data.Models.CourseFee();
+        isEditing = false;
+        ShowModal("addEditCourseFeeModal");
+    }
+
+    private async Task OpenEditCourseFeeModal(int courseFeeId)
+    {
+        isEditing = true;
+        var token = await AuthService.GetTokenAsync();
+        HttpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+        var response = await HttpClient.GetAsync($"CourseFee/GetById/{courseFeeId}");
+        if (response.IsSuccessStatusCode)
+        {
+            courseFee = await response.Content.ReadFromJsonAsync<Data.Models.CourseFee>();
+            ShowModal("addEditCourseFeeModal");
+        }
+        else
+        {
+            await ShowErrorToast($"Error fetching course fee: {response.ReasonPhrase}");
+        }
+    }
+
+    private void OpenDeleteConfirmationModal(int courseFeeId)
+    {
+        courseFeeToDeleteId = courseFeeId;
+        ShowModal("deleteConfirmationModal");
+    }
+
+    private void CloseAddEditCourseFeeModal()
+    {
+        HideModal("addEditCourseFeeModal");
+    }
+
+    private void CloseDeleteConfirmationModal()
+    {
+        HideModal("deleteConfirmationModal");
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        try
+        {
+            var token = await AuthService.GetTokenAsync();
+            HttpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            HttpResponseMessage response;
+            if (isEditing)
+            {
+                response = await HttpClient.PutAsJsonAsync("CourseFee/Update", courseFee);
+                await ShowSuccessToast("Course fee updated successfully.");
+            }
+            else
+            {
+                response = await HttpClient.PostAsJsonAsync("CourseFee/Create", courseFee);
+                await ShowSuccessToast("Course fee added successfully.");
+            }
+
+            if (response.IsSuccessStatusCode)
+            {
+                await LoadCourseFees();
+            }
+            else
+            {
+                await ShowErrorToast($"Error saving course fee: {response.ReasonPhrase}");
+            }
+        }
+        catch (Exception ex)
+        {
+            await ShowErrorToast($"Error saving course fee: {ex.Message}");
+        }
+        finally
+        {
+            CloseAddEditCourseFeeModal();
+        }
+    }
+
+    private async Task ConfirmDeleteCourseFee()
+    {
+        try
+        {
+            var token = await AuthService.GetTokenAsync();
+            HttpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            var response = await HttpClient.DeleteAsync($"CourseFee/Delete/{courseFeeToDeleteId}");
+            if (response.IsSuccessStatusCode)
+            {
+                await ShowSuccessToast("Course fee deleted successfully.");
+                await LoadCourseFees();
+            }
+            else
+            {
+                await ShowErrorToast($"Error deleting course fee: {response.ReasonPhrase}");
+            }
+        }
+        catch (Exception ex)
+        {
+            await ShowErrorToast($"Error deleting course fee: {ex.Message}");
+        }
+        finally
+        {
+            CloseDeleteConfirmationModal();
+        }
+    }
+
+    private void ShowModal(string modalId)
+    {
+        JSRuntime.InvokeVoidAsync("eval", $"$('#{modalId}').modal('show');");
+    }
+
+    private void HideModal(string modalId)
+    {
+        JSRuntime.InvokeVoidAsync("eval", $"$('#{modalId}').modal('hide');");
+    }
+
+    private async Task ShowSuccessToast(string message)
+    {
+        await JSRuntime.InvokeVoidAsync("showSuccess", message);
+    }
+
+    private async Task ShowErrorToast(string message)
+    {
+        await JSRuntime.InvokeVoidAsync("showError", message);
+    }
+}
+
+@* @code {
     private string SearchQuery { get; set; } = string.Empty;
 
     private List<CourseFeeResponseModel> courseFees = new List<CourseFeeResponseModel>();
@@ -294,3 +523,4 @@
         await JSRuntime.InvokeVoidAsync("hideModal", modalId);
     }
 }
+ *@
