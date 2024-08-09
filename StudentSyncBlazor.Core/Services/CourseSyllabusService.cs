@@ -21,29 +21,7 @@ namespace StudentSync.Core.Services
             _context = context;
         }
 
-        //public async Task<List<CourseSyllabusResponseModel>> GetAllCourseSyllabusesAsync()
-        //{
-        //    var courseSyllabuses = await _context.CourseSyllabi
-        //    .Join(_context.Courses,
-        //          cs => cs.CourseId,
-        //          course => course.CourseId,
-        //          (cs, course) => new CourseSyllabusResponseModel
-        //          {
-        //              Id = cs.Id,
-        //              CourseId = cs.CourseId,
-        //              CourseName = course.CourseName,
-        //              ChapterName = cs.ChapterName,
-        //              TopicName = cs.TopicName,
-        //              Remarks = cs.Remarks,
-        //              CreatedBy = cs.CreatedBy,
-        //              CreatedDate = cs.CreatedDate,
-        //              UpdatedBy = cs.UpdatedBy,
-        //              UpdatedDate = cs.UpdatedDate
-        //          })
-        //    .ToListAsync();
-
-        //    return courseSyllabuses;
-        //}
+   
 
         public async Task<List<CourseSyllabusResponseModel>> GetAllCourseSyllabusesAsync()
         {

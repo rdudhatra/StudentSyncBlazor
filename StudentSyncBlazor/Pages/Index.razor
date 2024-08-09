@@ -1,19 +1,12 @@
 ﻿@page "/"
-@using StudentSyncBlazor.Core.Services.Interface
-@using StudentSyncBlazor.Core.Services.Interfaces
-@inject IEmployeeService EmployeeService
-@inject IStudentInstallmentService StudentInstallmentService
-@inject IStudentAttendanceService StudentAttendanceService
-@inject IStudentAssessmentService StudentAssessmentService
-@inject IInquiryFollowUpService InquiryFollowUpService
-@inject IInquiryService InquiryService
-@inject IEnrollmentService EnrollmentService
-@inject ICourseSyllabusService CourseSyllabusService
-@inject ICourseExamServices CourseExamService
-@inject ICourseServices CourseServices
-@inject ICourseFeeService CourseFeeService
-@inject IBatchService BatchService
+@attribute [Authorize]
 
+
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IHttpContextAccessor HttpContextAccessor
+@inject HttpClient HttpClient
+ 
 <Breadcrumb Title="DashBoard" BreadcrumbPageTitle="Menu"></Breadcrumb>
 
 <div class="row">
@@ -130,7 +123,7 @@
                     <div id="inquiries-chart"></div>
                 </div>
                 <div>
-                    <h4 class="mb-1 mt-1"><span>@TotalCourseSyllbus</span></h4>
+                    <h4 class="mb-1 mt-1"><span>@TotalCourseSyllabus</span></h4>
                 </div>
                 <p class="text-muted mt-3 mb-0">
                     <span class="text-danger me-1"><i class="mdi mdi-arrow-down-bold me-1"></i>6.24%</span> since last week
@@ -230,8 +223,6 @@
     </div> <!-- end col-->
 
 </div> <!-- end row -->
-
-
 @code {
     private int TotalEmployees { get; set; }
     private int TotalBatches { get; set; }
@@ -244,24 +235,47 @@
     private int TotalStudentAttendance { get; set; }
     private int TotalStudentInstallment { get; set; }
     private int TotalStudentInquiryFollowUp { get; set; }
-    private int TotalCourseSyllbus { get; set; }
+    private int TotalCourseSyllabus { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
-        TotalEmployees = await EmployeeService.GetTotalEmployeesAsync();
-        TotalBatches = await BatchService.GetTotalBatchesAsync();
-        TotalCourseExams = await CourseExamService.GetTotalCourseExamsAsync();
-        TotalCourseFees = await CourseFeeService.GetTotalCourseFeesAsync();
-        TotalCourses = await CourseServices.GetTotalCoursesAsync();
-        TotalEnrollments = await EnrollmentService.GetTotalEnrollmentsAsync();
-        TotalInquiries = await InquiryService.GetTotalInquiriesAsync();
-        TotalStudentAssessment = await StudentAssessmentService.GetTotalStudentAssessmentsAsync();
-        TotalStudentAttendance = await StudentAttendanceService.GetTotalStudentAttendanceAsync();
-        TotalStudentInstallment = await StudentInstallmentService.GetTotalStudentInstallMentAsync();
-        TotalStudentInquiryFollowUp = await InquiryFollowUpService.GetTotalInquiryFollowUpAsync();
-        TotalCourseSyllbus = await CourseSyllabusService.GetTotalCourseSyllabusAsync();
-        // Fetch other data as needed
+        try
+        {
+            TotalEmployees = await GetTotalCountAsync("ApiController/total-employees");
+            TotalBatches = await GetTotalCountAsync("ApiController/total-batches");
+            TotalCourseExams = await GetTotalCountAsync("ApiController/total-course-exams");
+            TotalCourseFees = await GetTotalCountAsync("ApiController/total-course-fees");
+            TotalCourses = await GetTotalCountAsync("ApiController/total-courses");
+            TotalEnrollments = await GetTotalCountAsync("ApiController/total-enrollments");
+            TotalInquiries = await GetTotalCountAsync("ApiController/total-inquiries");
+            TotalStudentAssessment = await GetTotalCountAsync("ApiController/total-student-assessments");
+            TotalStudentAttendance = await GetTotalCountAsync("ApiController/total-student-attendance");
+            TotalStudentInstallment = await GetTotalCountAsync("ApiController/total-student-installnment");
+            TotalStudentInquiryFollowUp = await GetTotalCountAsync("ApiController/total-inquiriesfollowups");
+            TotalCourseSyllabus = await GetTotalCountAsync("ApiController/total-coursessyllbus");
+        }
+        catch (Exception ex)
+        {
+            // Handle exceptions (e.g., log error or show a message)
+            Console.WriteLine($"An error occurred: {ex.Message}");
+        }
     }
 
+    private async Task<int> GetTotalCountAsync(string endpoint)
+    {
+        try
+        {
+            var response = await HttpClient.GetAsync(endpoint);
+            response.EnsureSuccessStatusCode();
+            var content = await response.Content.ReadAsStringAsync();
+            return int.Parse(content);
+        }
+        catch (Exception ex)
+        {
+            // Handle exceptions (e.g., log error or show a message)
+            Console.WriteLine($"An error occurred while fetching data from {endpoint}: {ex.Message}");
+            return 0; // Default to 0 in case of error
+        }
+    }
 }
 

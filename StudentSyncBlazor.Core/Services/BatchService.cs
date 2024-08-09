@@ -46,33 +46,6 @@ namespace StudentSyncBlazor.Core.Services
             return batches;
         }
 
-        //public async Task<List<BatchResponseModel>> GetAllBatchesAsync()
-        //{
-        //    var batches = await _context.Batches
-        //        .Join(_context.Courses,
-        //              batch => batch.BatchCourseId,
-        //              course => course.CourseId,
-        //              (batch, course) => new BatchResponseModel
-        //              {
-        //                  Id = batch.Id,
-        //                  BatchCode = batch.BatchCode,
-        //                  BatchTime = batch.BatchTime,
-        //                  BatchCourseId = batch.BatchCourseId,
-        //                  CourseName = course.CourseName,
-        //                  FacultyName = batch.FacultyName,
-        //                  IsActive = batch.IsActive ?? false,
-        //                  Remarks = batch.Remarks,
-        //                  CreatedBy = batch.CreatedBy,
-        //                  CreatedDate = batch.CreatedDate ?? default,
-        //                  UpdatedBy = batch.UpdatedBy,
-        //                  UpdatedDate = batch.UpdatedDate ?? default
-        //              })
-        //        .ToListAsync();
-
-        //    return batches;
-        //}
-
-
         public async Task<Batch> GetBatchByIdAsync(int id)
         {
             return await _context.Batches.FindAsync(id);

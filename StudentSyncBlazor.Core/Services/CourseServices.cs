@@ -54,12 +54,7 @@ namespace StudentSyncBlazor.Core.Services
         }
 
 
-        //public async Task<IResult> AddCourseAsync(Course course)
-        //{
-        //    _context.Courses.Add(course);
-        //    await _context.SaveChangesAsync();
-        //    return Result.Success("Course added successfully");
-        //}
+
 
         public async Task<IResult> UpdateCourseAsync(Course course)
         {

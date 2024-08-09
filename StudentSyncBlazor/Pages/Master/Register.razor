@@ -117,25 +117,5 @@
         }
     }
 }
-@* @code {
-    private RegisterViewModel registerModel = new RegisterViewModel();
-    private bool registerSuccess = false;
-    private bool termsAccepted = false;
-    private string errorMessage;
 
-    private async Task HandleValidSubmit()
-    {
-        var result = await AuthService.RegisterAsync(registerModel);
-        if (result.Succeeded)
-        {
-            registerSuccess = true;
-            Navigation.NavigateTo("/login");
-        }
-        else
-        {
-            errorMessage = result.Messages.FirstOrDefault() ?? "Registration failed. Please try again.";
-
-        }
-    }
-} *@
 
